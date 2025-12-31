@@ -26,7 +26,7 @@ static BOOL IsUNCPath(const char* path)
 //
 // Internal helper: Check if path already has long path prefix
 //
-static BOOL HasLongPathPrefix(const char* path)
+static BOOL PathHasLongPrefix(const char* path)
 {
     return path != NULL &&
            path[0] == '\\' && path[1] == '\\' &&
@@ -55,7 +55,7 @@ wchar_t* SalAllocWidePath(const char* ansiPath)
     }
 
     // Determine if we need the \\?\ prefix
-    BOOL needsPrefix = (ansiLen >= SAL_LONG_PATH_THRESHOLD) && !HasLongPathPrefix(ansiPath);
+    BOOL needsPrefix = (ansiLen >= SAL_LONG_PATH_THRESHOLD) && !PathHasLongPrefix(ansiPath);
     BOOL isUNC = IsUNCPath(ansiPath);
 
     // Calculate total buffer size needed
@@ -64,7 +64,7 @@ wchar_t* SalAllocWidePath(const char* ansiPath)
     size_t prefixLen = 0;
     if (needsPrefix)
     {
-        prefixLen = isUNC ? 6 : 4; // UNC: \\?\UNC\ minus \\, Local: \\?\
+        prefixLen = isUNC ? 6 : 4; // UNC: \\?\UNC\ minus \\, Local: \\?\ (prefix)
     }
 
     size_t totalLen = prefixLen + wideLen;
@@ -137,7 +137,7 @@ SalWidePath::SalWidePath(const char* ansiPath)
     if (ansiPath != NULL)
     {
         size_t len = strlen(ansiPath);
-        m_hasPrefix = (len >= SAL_LONG_PATH_THRESHOLD) && !HasLongPathPrefix(ansiPath);
+        m_hasPrefix = (len >= SAL_LONG_PATH_THRESHOLD) && !PathHasLongPrefix(ansiPath);
         m_widePath = SalAllocWidePath(ansiPath);
     }
 }
@@ -151,7 +151,7 @@ SalWidePath::~SalWidePath()
 // Convenience wrappers
 //
 
-HANDLE SalCreateFile(
+HANDLE SalLPCreateFile(
     const char* fileName,
     DWORD dwDesiredAccess,
     DWORD dwShareMode,
@@ -176,7 +176,7 @@ HANDLE SalCreateFile(
         hTemplateFile);
 }
 
-DWORD SalGetFileAttributes(const char* fileName)
+DWORD SalLPGetFileAttributes(const char* fileName)
 {
     SalWidePath widePath(fileName);
     if (!widePath.IsValid())
@@ -187,7 +187,7 @@ DWORD SalGetFileAttributes(const char* fileName)
     return GetFileAttributesW(widePath.Get());
 }
 
-BOOL SalSetFileAttributes(const char* fileName, DWORD dwFileAttributes)
+BOOL SalLPSetFileAttributes(const char* fileName, DWORD dwFileAttributes)
 {
     SalWidePath widePath(fileName);
     if (!widePath.IsValid())
@@ -198,7 +198,7 @@ BOOL SalSetFileAttributes(const char* fileName, DWORD dwFileAttributes)
     return SetFileAttributesW(widePath.Get(), dwFileAttributes);
 }
 
-BOOL SalDeleteFile(const char* fileName)
+BOOL SalLPDeleteFile(const char* fileName)
 {
     SalWidePath widePath(fileName);
     if (!widePath.IsValid())
@@ -209,7 +209,7 @@ BOOL SalDeleteFile(const char* fileName)
     return DeleteFileW(widePath.Get());
 }
 
-BOOL SalRemoveDirectory(const char* dirName)
+BOOL SalLPRemoveDirectory(const char* dirName)
 {
     SalWidePath widePath(dirName);
     if (!widePath.IsValid())
@@ -220,7 +220,7 @@ BOOL SalRemoveDirectory(const char* dirName)
     return RemoveDirectoryW(widePath.Get());
 }
 
-BOOL SalCreateDirectory(const char* pathName, LPSECURITY_ATTRIBUTES lpSecurityAttributes)
+BOOL SalLPCreateDirectory(const char* pathName, LPSECURITY_ATTRIBUTES lpSecurityAttributes)
 {
     SalWidePath widePath(pathName);
     if (!widePath.IsValid())
@@ -231,7 +231,7 @@ BOOL SalCreateDirectory(const char* pathName, LPSECURITY_ATTRIBUTES lpSecurityAt
     return CreateDirectoryW(widePath.Get(), lpSecurityAttributes);
 }
 
-BOOL SalMoveFile(const char* existingFileName, const char* newFileName)
+BOOL SalLPMoveFile(const char* existingFileName, const char* newFileName)
 {
     SalWidePath wideExisting(existingFileName);
     SalWidePath wideNew(newFileName);
@@ -244,7 +244,7 @@ BOOL SalMoveFile(const char* existingFileName, const char* newFileName)
     return MoveFileW(wideExisting.Get(), wideNew.Get());
 }
 
-BOOL SalCopyFile(const char* existingFileName, const char* newFileName, BOOL failIfExists)
+BOOL SalLPCopyFile(const char* existingFileName, const char* newFileName, BOOL failIfExists)
 {
     SalWidePath wideExisting(existingFileName);
     SalWidePath wideNew(newFileName);
@@ -257,7 +257,7 @@ BOOL SalCopyFile(const char* existingFileName, const char* newFileName, BOOL fai
     return CopyFileW(wideExisting.Get(), wideNew.Get(), failIfExists);
 }
 
-HANDLE SalFindFirstFile(const char* fileName, WIN32_FIND_DATAW* findData)
+HANDLE SalLPFindFirstFile(const char* fileName, WIN32_FIND_DATAW* findData)
 {
     SalWidePath widePath(fileName);
     if (!widePath.IsValid())
@@ -276,7 +276,7 @@ HANDLE SalFindFirstFile(const char* fileName, WIN32_FIND_DATAW* findData)
 
 #include "handles.h"
 
-HANDLE SalCreateFileTracked(
+HANDLE SalLPCreateFileTracked(
     const char* fileName,
     DWORD dwDesiredAccess,
     DWORD dwShareMode,
@@ -287,7 +287,7 @@ HANDLE SalCreateFileTracked(
     const char* srcFile,
     int srcLine)
 {
-    HANDLE h = SalCreateFile(fileName, dwDesiredAccess, dwShareMode,
+    HANDLE h = SalLPCreateFile(fileName, dwDesiredAccess, dwShareMode,
                              lpSecurityAttributes, dwCreationDisposition,
                              dwFlagsAndAttributes, hTemplateFile);
 

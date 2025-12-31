@@ -25,6 +25,7 @@
   salamander/src/common/str.cpp
   salamander/src/common/strutils.cpp
   salamander/src/common/trace.cpp
+  salamander/src/common/widepath.cpp
   salamander/src/common/winlib.cpp
   salamander/src/common/dep/crypt/aescrypt.c
   salamander/src/common/dep/crypt/aeskey.c

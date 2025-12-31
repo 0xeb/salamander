@@ -88,7 +88,7 @@ void SalFreeWidePath(wchar_t* widePath);
 //
 
 // CreateFile wrapper that supports long paths
-HANDLE SalCreateFile(
+HANDLE SalLPCreateFile(
     const char* fileName,
     DWORD dwDesiredAccess,
     DWORD dwShareMode,
@@ -98,29 +98,29 @@ HANDLE SalCreateFile(
     HANDLE hTemplateFile);
 
 // GetFileAttributes wrapper that supports long paths
-DWORD SalGetFileAttributes(const char* fileName);
+DWORD SalLPGetFileAttributes(const char* fileName);
 
 // SetFileAttributes wrapper that supports long paths
-BOOL SalSetFileAttributes(const char* fileName, DWORD dwFileAttributes);
+BOOL SalLPSetFileAttributes(const char* fileName, DWORD dwFileAttributes);
 
 // DeleteFile wrapper that supports long paths
-BOOL SalDeleteFile(const char* fileName);
+BOOL SalLPDeleteFile(const char* fileName);
 
 // RemoveDirectory wrapper that supports long paths
-BOOL SalRemoveDirectory(const char* dirName);
+BOOL SalLPRemoveDirectory(const char* dirName);
 
 // CreateDirectory wrapper that supports long paths
-BOOL SalCreateDirectory(const char* pathName, LPSECURITY_ATTRIBUTES lpSecurityAttributes);
+BOOL SalLPCreateDirectory(const char* pathName, LPSECURITY_ATTRIBUTES lpSecurityAttributes);
 
 // MoveFile wrapper that supports long paths
-BOOL SalMoveFile(const char* existingFileName, const char* newFileName);
+BOOL SalLPMoveFile(const char* existingFileName, const char* newFileName);
 
 // CopyFile wrapper that supports long paths
-BOOL SalCopyFile(const char* existingFileName, const char* newFileName, BOOL failIfExists);
+BOOL SalLPCopyFile(const char* existingFileName, const char* newFileName, BOOL failIfExists);
 
 // FindFirstFile wrapper that supports long paths
 // Note: Returns wide find data; caller must convert if needed
-HANDLE SalFindFirstFile(const char* fileName, WIN32_FIND_DATAW* findData);
+HANDLE SalLPFindFirstFile(const char* fileName, WIN32_FIND_DATAW* findData);
 
 // FindNextFile (standard API, no wrapper needed since handle is already wide)
 // Use standard FindNextFileW with handle from SalFindFirstFile
@@ -138,9 +138,9 @@ HANDLE SalFindFirstFile(const char* fileName, WIN32_FIND_DATAW* findData);
 
 // CreateFile with handle tracking - use instead of HANDLES_Q(CreateFile(...))
 #define SalCreateFileH(fileName, dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile) \
-    SalCreateFileTracked(fileName, dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile, __FILE__, __LINE__)
+    SalLPCreateFileTracked(fileName, dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile, __FILE__, __LINE__)
 
-HANDLE SalCreateFileTracked(
+HANDLE SalLPCreateFileTracked(
     const char* fileName,
     DWORD dwDesiredAccess,
     DWORD dwShareMode,
@@ -154,6 +154,6 @@ HANDLE SalCreateFileTracked(
 #else // !HANDLES_ENABLE
 
 // In release builds, just use the regular wrapper
-#define SalCreateFileH SalCreateFile
+#define SalCreateFileH SalLPCreateFile
 
 #endif // HANDLES_ENABLE

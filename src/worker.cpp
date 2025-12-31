@@ -6,6 +6,7 @@
 
 #include "cfgdlg.h"
 #include "worker.h"
+#include "common/widepath.h"
 
 #include <Aclapi.h>
 #include <Ntsecapi.h>
@@ -1129,8 +1130,9 @@ void GetDirInfo(char* buffer, const char* dir)
     if (NameEndsWithBackslash(dirFindFirst))
     { // FindFirstFile fails for a dir ending with a backslash (used for invalid directory names),
         // so in this situation we handle it through CreateFile and GetFileTime
-        HANDLE file = HANDLES_Q(CreateFile(dirFindFirst, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE,
-                                           NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL));
+        // Using SalCreateFileH for long path support (paths > 260 chars)
+        HANDLE file = SalCreateFileH(dirFindFirst, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE,
+                                     NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
         if (file != INVALID_HANDLE_VALUE)
         {
             if (GetFileTime(file, NULL, NULL, &lastWrite))
