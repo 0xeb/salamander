@@ -1,0 +1,80 @@
+# Common settings and utilities for Open Salamander CMake build
+# This file is included by the parent project's CMakeLists.txt
+
+# Compute paths relative to the salamander submodule root
+get_filename_component(SAL_ROOT "${CMAKE_CURRENT_LIST_DIR}/.." ABSOLUTE)
+set(SAL_SRC "${SAL_ROOT}/src")
+set(SAL_PLUGINS "${SAL_SRC}/plugins")
+set(SAL_SHARED "${SAL_PLUGINS}/shared")
+
+# Platform short name (matches VS build: Win32 or x64)
+if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+  set(SAL_PLATFORM "x64")
+else()
+  set(SAL_PLATFORM "Win32")
+endif()
+
+# Output directory base
+if(NOT DEFINED SAL_OUTPUT_DIR)
+  if(DEFINED ENV{OPENSAL_BUILD_DIR} AND NOT "$ENV{OPENSAL_BUILD_DIR}" STREQUAL "")
+    set(SAL_OUTPUT_DIR "$ENV{OPENSAL_BUILD_DIR}")
+  else()
+    set(SAL_OUTPUT_DIR "${CMAKE_BINARY_DIR}/out/")
+  endif()
+endif()
+
+# Ensure trailing slash
+string(REGEX REPLACE "([^/])$" "\\1/" SAL_OUTPUT_DIR "${SAL_OUTPUT_DIR}")
+
+# Full output path with config and platform
+set(SAL_OUTPUT_BASE "${SAL_OUTPUT_DIR}salamander")
+
+# Common preprocessor definitions (from sal_base.props)
+set(SAL_COMMON_DEFINES
+  _MT
+  WIN32
+  _WINDOWS
+  WINVER=0x0601
+  _WIN32_WINNT=0x0601
+  _WIN32_IE=0x0800
+  _CRT_SECURE_NO_WARNINGS
+  _SCL_SECURE_NO_WARNINGS
+  _CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES
+  _CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES_COUNT
+)
+
+# Debug-specific defines
+set(SAL_DEBUG_DEFINES
+  _DEBUG
+  __DEBUG_WINLIB
+  TRACE_ENABLE
+  HANDLES_ENABLE
+  MESSAGES_DEBUG
+  MULTITHREADED_TRACE_ENABLE
+  MULTITHREADED_MESSAGES_ENABLE
+  MULTITHREADED_HANDLES_ENABLE
+  _CRTDBG_MAP_ALLOC
+  _ALLOW_RTCc_IN_STL
+)
+
+# Release-specific defines
+set(SAL_RELEASE_DEFINES
+  NDEBUG
+  MESSAGES_DISABLE
+)
+
+# Common include directories
+set(SAL_COMMON_INCLUDES
+  "${SAL_SRC}"
+  "${SAL_SRC}/common"
+  "${SAL_SRC}/common/dep"
+  "${SAL_SHARED}"
+)
+
+# Common link libraries
+set(SAL_COMMON_LIBS
+  comctl32
+)
+
+message(STATUS "Salamander root: ${SAL_ROOT}")
+message(STATUS "Salamander output: ${SAL_OUTPUT_BASE}")
