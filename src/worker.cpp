@@ -1143,7 +1143,7 @@ void GetDirInfo(char* buffer, const char* dir)
     else
     {
         WIN32_FIND_DATA data;
-        HANDLE find = HANDLES_Q(FindFirstFile(dirFindFirst, &data));
+        HANDLE find = SalFindFirstFileH(dirFindFirst, &data);
         if (find != INVALID_HANDLE_VALUE)
         {
             HANDLES(FindClose(find));
@@ -1185,7 +1185,7 @@ BOOL IsDirectoryEmpty(const char* name) // directories/subdirectories contain no
 
     WIN32_FIND_DATA fileData;
     HANDLE search;
-    search = HANDLES_Q(FindFirstFile(dir, &fileData));
+    search = SalFindFirstFileH(dir, &fileData);
     if (search != INVALID_HANDLE_VALUE)
     {
         do
@@ -1654,10 +1654,9 @@ DWORD CompressFile(char* fileName, DWORD attrs)
         attrsChange = TRUE;
         SetFileAttributes(fileNameCrFile, attrs & ~FILE_ATTRIBUTE_READONLY);
     }
-    HANDLE file = HANDLES_Q(CreateFile(fileNameCrFile, FILE_READ_DATA | FILE_WRITE_DATA,
-                                       FILE_SHARE_READ | FILE_SHARE_WRITE, NULL,
-                                       OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS,
-                                       NULL));
+    HANDLE file = SalCreateFileH(fileNameCrFile, FILE_READ_DATA | FILE_WRITE_DATA,
+                                  FILE_SHARE_READ | FILE_SHARE_WRITE, NULL,
+                                  OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
     if (file == INVALID_HANDLE_VALUE)
         ret = GetLastError();
     else
@@ -1693,10 +1692,9 @@ DWORD UncompressFile(char* fileName, DWORD attrs)
         SetFileAttributes(fileNameCrFile, attrs & ~FILE_ATTRIBUTE_READONLY);
     }
 
-    HANDLE file = HANDLES_Q(CreateFile(fileNameCrFile, FILE_READ_DATA | FILE_WRITE_DATA,
-                                       FILE_SHARE_READ | FILE_SHARE_WRITE,
-                                       NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS,
-                                       NULL));
+    HANDLE file = SalCreateFileH(fileNameCrFile, FILE_READ_DATA | FILE_WRITE_DATA,
+                                  FILE_SHARE_READ | FILE_SHARE_WRITE,
+                                  NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
     if (file == INVALID_HANDLE_VALUE)
         ret = GetLastError();
     else
@@ -1776,11 +1774,10 @@ DWORD MyEncryptFile(HWND hProgressDlg, char* fileName, DWORD attrs, DWORD finalA
     if (preserveDate)
     {
         HANDLE file;
-        file = HANDLES_Q(CreateFile(fileNameCrFile, GENERIC_READ,
-                                    FILE_SHARE_READ | FILE_SHARE_WRITE,
-                                    NULL, OPEN_EXISTING,
-                                    (attrs & FILE_ATTRIBUTE_DIRECTORY) ? FILE_FLAG_BACKUP_SEMANTICS : 0,
-                                    NULL));
+        file = SalCreateFileH(fileNameCrFile, GENERIC_READ,
+                              FILE_SHARE_READ | FILE_SHARE_WRITE,
+                              NULL, OPEN_EXISTING,
+                              (attrs & FILE_ATTRIBUTE_DIRECTORY) ? FILE_FLAG_BACKUP_SEMANTICS : 0, NULL);
         if (file != INVALID_HANDLE_VALUE)
         {
             FILETIME ftCreated, /*ftAccessed,*/ ftModified;
@@ -1790,11 +1787,10 @@ DWORD MyEncryptFile(HWND hProgressDlg, char* fileName, DWORD attrs, DWORD finalA
             if (!EncryptFile(fileNameCrFile))
                 retEnc = GetLastError();
 
-            file = HANDLES_Q(CreateFile(fileNameCrFile, GENERIC_WRITE,
-                                        FILE_SHARE_READ | FILE_SHARE_WRITE,
-                                        NULL, OPEN_EXISTING,
-                                        (attrs & FILE_ATTRIBUTE_DIRECTORY) ? FILE_FLAG_BACKUP_SEMANTICS : 0,
-                                        NULL));
+            file = SalCreateFileH(fileNameCrFile, GENERIC_WRITE,
+                                  FILE_SHARE_READ | FILE_SHARE_WRITE,
+                                  NULL, OPEN_EXISTING,
+                                  (attrs & FILE_ATTRIBUTE_DIRECTORY) ? FILE_FLAG_BACKUP_SEMANTICS : 0, NULL);
             if (file != INVALID_HANDLE_VALUE)
             {
                 SetFileTime(file, &ftCreated, NULL /*&ftAccessed*/, &ftModified);
@@ -1835,11 +1831,10 @@ DWORD MyDecryptFile(char* fileName, DWORD attrs, BOOL preserveDate)
     if (preserveDate)
     {
         HANDLE file;
-        file = HANDLES_Q(CreateFile(fileNameCrFile, GENERIC_READ,
-                                    FILE_SHARE_READ | FILE_SHARE_WRITE,
-                                    NULL, OPEN_EXISTING,
-                                    (attrs & FILE_ATTRIBUTE_DIRECTORY) ? FILE_FLAG_BACKUP_SEMANTICS : 0,
-                                    NULL));
+        file = SalCreateFileH(fileNameCrFile, GENERIC_READ,
+                              FILE_SHARE_READ | FILE_SHARE_WRITE,
+                              NULL, OPEN_EXISTING,
+                              (attrs & FILE_ATTRIBUTE_DIRECTORY) ? FILE_FLAG_BACKUP_SEMANTICS : 0, NULL);
         if (file != INVALID_HANDLE_VALUE)
         {
             FILETIME ftCreated, /*ftAccessed,*/ ftModified;
@@ -1849,11 +1844,10 @@ DWORD MyDecryptFile(char* fileName, DWORD attrs, BOOL preserveDate)
             if (!DecryptFile(fileNameCrFile, 0))
                 ret = GetLastError();
 
-            file = HANDLES_Q(CreateFile(fileNameCrFile, GENERIC_WRITE,
-                                        FILE_SHARE_READ | FILE_SHARE_WRITE,
-                                        NULL, OPEN_EXISTING,
-                                        (attrs & FILE_ATTRIBUTE_DIRECTORY) ? FILE_FLAG_BACKUP_SEMANTICS : 0,
-                                        NULL));
+            file = SalCreateFileH(fileNameCrFile, GENERIC_WRITE,
+                                  FILE_SHARE_READ | FILE_SHARE_WRITE,
+                                  NULL, OPEN_EXISTING,
+                                  (attrs & FILE_ATTRIBUTE_DIRECTORY) ? FILE_FLAG_BACKUP_SEMANTICS : 0, NULL);
             if (file != INVALID_HANDLE_VALUE)
             {
                 SetFileTime(file, &ftCreated, NULL /*&ftAccessed*/, &ftModified);
@@ -1901,9 +1895,9 @@ BOOL CheckFileOrDirADS(const char* fileName, BOOL isDir, CQuadWord* adsSize, wch
         char fileNameCrFileCopy[3 * MAX_PATH];
         MakeCopyWithBackslashIfNeeded(fileNameCrFile, fileNameCrFileCopy);
 
-        HANDLE file = HANDLES_Q(CreateFile(fileNameCrFile, 0, FILE_SHARE_READ | FILE_SHARE_WRITE,
-                                           NULL, OPEN_EXISTING,
-                                           isDir ? FILE_FLAG_BACKUP_SEMANTICS : 0, NULL));
+        HANDLE file = SalCreateFileH(fileNameCrFile, 0, FILE_SHARE_READ | FILE_SHARE_WRITE,
+                                      NULL, OPEN_EXISTING,
+                                      isDir ? FILE_FLAG_BACKUP_SEMANTICS : 0, NULL);
         if (file == INVALID_HANDLE_VALUE)
         {
             if (winError != NULL)
@@ -2929,15 +2923,15 @@ COPY_ADS_AGAIN:
 HANDLE SalCreateFileEx(const char* fileName, DWORD desiredAccess,
                        DWORD shareMode, DWORD flagsAndAttributes, BOOL* encryptionNotSupported)
 {
-    HANDLE out = NOHANDLES(CreateFile(fileName, desiredAccess, shareMode, NULL,
-                                      CREATE_NEW, flagsAndAttributes, NULL));
+    HANDLE out = SalLPCreateFile(fileName, desiredAccess, shareMode, NULL,
+                                  CREATE_NEW, flagsAndAttributes, NULL);
     if (out == INVALID_HANDLE_VALUE)
     {
         DWORD err = GetLastError();
         if (encryptionNotSupported != NULL && (flagsAndAttributes & FILE_ATTRIBUTE_ENCRYPTED))
         { // when the target disk cannot create an Encrypted file (observed on NTFS network disk (tested on share from XP) while logged in under a different username than we have in the system (on the current console) - the remote machine has a same-named user without a password, so it cannot be used over the network)
-            out = NOHANDLES(CreateFile(fileName, desiredAccess, shareMode, NULL,
-                                       CREATE_NEW, (flagsAndAttributes & ~(FILE_ATTRIBUTE_ENCRYPTED | FILE_ATTRIBUTE_READONLY)), NULL));
+            out = SalLPCreateFile(fileName, desiredAccess, shareMode, NULL,
+                                  CREATE_NEW, (flagsAndAttributes & ~(FILE_ATTRIBUTE_ENCRYPTED | FILE_ATTRIBUTE_READONLY)), NULL);
             if (out != INVALID_HANDLE_VALUE)
             {
                 *encryptionNotSupported = TRUE;
@@ -2952,7 +2946,7 @@ HANDLE SalCreateFileEx(const char* fileName, DWORD desiredAccess,
             err == ERROR_ACCESS_DENIED)
         {
             WIN32_FIND_DATA data;
-            HANDLE find = HANDLES_Q(FindFirstFile(fileName, &data));
+            HANDLE find = SalFindFirstFileH(fileName, &data);
             if (find != INVALID_HANDLE_VALUE)
             {
                 HANDLES(FindClose(find));
@@ -2988,13 +2982,13 @@ HANDLE SalCreateFileEx(const char* fileName, DWORD desiredAccess,
                             }
                             if (tmpName[0] != 0) // if we successfully "tidied" the conflicting file, try creating
                             {                    // the target file again, then restore the original name
-                                out = NOHANDLES(CreateFile(fileName, desiredAccess, shareMode, NULL,
-                                                           CREATE_NEW, flagsAndAttributes, NULL));
+                                out = SalLPCreateFile(fileName, desiredAccess, shareMode, NULL,
+                                                      CREATE_NEW, flagsAndAttributes, NULL);
                                 if (out == INVALID_HANDLE_VALUE && encryptionNotSupported != NULL &&
                                     (flagsAndAttributes & FILE_ATTRIBUTE_ENCRYPTED))
                                 { // when the target disk cannot create an Encrypted file (observed on NTFS network disk (tested on share from XP) while logged in under a different username than we have in the system (on the current console) - the remote machine has a same-named user without a password, so it cannot be used over the network)
-                                    out = NOHANDLES(CreateFile(fileName, desiredAccess, shareMode, NULL,
-                                                               CREATE_NEW, (flagsAndAttributes & ~(FILE_ATTRIBUTE_ENCRYPTED | FILE_ATTRIBUTE_READONLY)), NULL));
+                                    out = SalLPCreateFile(fileName, desiredAccess, shareMode, NULL,
+                                                          CREATE_NEW, (flagsAndAttributes & ~(FILE_ATTRIBUTE_ENCRYPTED | FILE_ATTRIBUTE_READONLY)), NULL);
                                     if (out != INVALID_HANDLE_VALUE)
                                     {
                                         *encryptionNotSupported = TRUE;
@@ -3105,12 +3099,12 @@ void SetCompressAndEncryptedAttrs(const char* name, DWORD attr, HANDLE* out, BOO
             if (err != NO_ERROR)
                 TRACE_I("SetCompressAndEncryptedAttrs(): Unable to set Encrypted attribute for " << name << "! error=" << GetErrorText(err));
             // reopen the existing file to continue writing
-            *out = HANDLES_Q(CreateFile(name, GENERIC_WRITE | (openAlsoForRead ? GENERIC_READ : 0), 0, NULL, OPEN_ALWAYS,
-                                        asyncPar->GetOverlappedFlag() | FILE_FLAG_SEQUENTIAL_SCAN, NULL));
+            *out = SalCreateFileH(name, GENERIC_WRITE | (openAlsoForRead ? GENERIC_READ : 0), 0, NULL, OPEN_ALWAYS,
+                                  asyncPar->GetOverlappedFlag() | FILE_FLAG_SEQUENTIAL_SCAN, NULL);
             if (openAlsoForRead && *out == INVALID_HANDLE_VALUE) // problem: reopening failed, try write-only
             {
-                *out = HANDLES_Q(CreateFile(name, GENERIC_WRITE, 0, NULL, OPEN_ALWAYS,
-                                            asyncPar->GetOverlappedFlag() | FILE_FLAG_SEQUENTIAL_SCAN, NULL));
+                *out = SalCreateFileH(name, GENERIC_WRITE, 0, NULL, OPEN_ALWAYS,
+                                      asyncPar->GetOverlappedFlag() | FILE_FLAG_SEQUENTIAL_SCAN, NULL);
             }
             if (*out == INVALID_HANDLE_VALUE) // still a problem: cannot reopen; delete it + report an error
             {
@@ -3139,7 +3133,7 @@ void CorrectCaseOfTgtName(char* tgtName, BOOL dataRead, WIN32_FIND_DATA* data)
 {
     if (!dataRead)
     {
-        HANDLE find = HANDLES_Q(FindFirstFile(tgtName, data));
+        HANDLE find = SalFindFirstFileH(tgtName, data);
         if (find != INVALID_HANDLE_VALUE)
             HANDLES(FindClose(find));
         else
@@ -3235,8 +3229,8 @@ void DoCopyFileLoopOrig(HANDLE& in, HANDLE& out, void* buffer, int& limitBufferS
                             SetEndOfFile(out);     // otherwise on a floppy the remaining bytes would be written
                         HANDLES(CloseHandle(out)); // close the invalid handle
                     }
-                    out = HANDLES_Q(CreateFile(op->TargetName, GENERIC_WRITE | GENERIC_READ, 0, NULL,
-                                               OPEN_ALWAYS, FILE_FLAG_SEQUENTIAL_SCAN, NULL));
+                    out = SalCreateFileH(op->TargetName, GENERIC_WRITE | GENERIC_READ, 0, NULL,
+                                         OPEN_ALWAYS, FILE_FLAG_SEQUENTIAL_SCAN, NULL);
                     if (out != INVALID_HANDLE_VALUE) // opened successfully; now adjust the offset
                     {
                         LONG lo, hi;
@@ -3340,9 +3334,9 @@ void DoCopyFileLoopOrig(HANDLE& in, HANDLE& out, void* buffer, int& limitBufferS
 
                 if (in != NULL)
                     HANDLES(CloseHandle(in)); // close the invalid handle
-                in = HANDLES_Q(CreateFile(op->SourceName, GENERIC_READ,
-                                          FILE_SHARE_READ | FILE_SHARE_WRITE, NULL,
-                                          OPEN_EXISTING, FILE_FLAG_SEQUENTIAL_SCAN, NULL));
+                in = SalCreateFileH(op->SourceName, GENERIC_READ,
+                                    FILE_SHARE_READ | FILE_SHARE_WRITE, NULL,
+                                    OPEN_EXISTING, FILE_FLAG_SEQUENTIAL_SCAN, NULL);
                 if (in != INVALID_HANDLE_VALUE) // opened successfully; now adjust the offset
                 {
                     LONG lo, hi;
@@ -3828,9 +3822,9 @@ BOOL CCopy_Context::RetryCopyReadErr(DWORD* err, BOOL* copyAgain, BOOL* errAgain
 {
     if (*In != NULL)
         HANDLES(CloseHandle(*In)); // close the invalid handle
-    *In = HANDLES_Q(CreateFile(Op->SourceName, GENERIC_READ,
-                               FILE_SHARE_READ | FILE_SHARE_WRITE, NULL,
-                               OPEN_EXISTING, AsyncPar->GetOverlappedFlag() | FILE_FLAG_SEQUENTIAL_SCAN, NULL));
+    *In = SalCreateFileH(Op->SourceName, GENERIC_READ,
+                         FILE_SHARE_READ | FILE_SHARE_WRITE, NULL,
+                         OPEN_EXISTING, AsyncPar->GetOverlappedFlag() | FILE_FLAG_SEQUENTIAL_SCAN, NULL);
     if (*In != INVALID_HANDLE_VALUE) // opened successfully; now adjust the offset
     {
         CQuadWord size;
@@ -3959,8 +3953,8 @@ BOOL CCopy_Context::RetryCopyWriteErr(DWORD* err, BOOL* copyAgain, BOOL* errAgai
             SetEndOfFile(*Out);     // otherwise on a floppy the remaining bytes would be written
         HANDLES(CloseHandle(*Out)); // close the invalid handle
     }
-    *Out = HANDLES_Q(CreateFile(Op->TargetName, GENERIC_WRITE | GENERIC_READ, 0, NULL,
-                                OPEN_ALWAYS, AsyncPar->GetOverlappedFlag() | FILE_FLAG_SEQUENTIAL_SCAN, NULL));
+    *Out = SalCreateFileH(Op->TargetName, GENERIC_WRITE | GENERIC_READ, 0, NULL,
+                          OPEN_ALWAYS, AsyncPar->GetOverlappedFlag() | FILE_FLAG_SEQUENTIAL_SCAN, NULL);
     if (*Out != INVALID_HANDLE_VALUE) // opened successfully; now adjust the offset
     {
         BOOL ok = TRUE;
@@ -4447,7 +4441,7 @@ BOOL DoCopyFile(COperation* op, HWND hProgressDlg, void* buffer,
         !invalidSrcName && !invalidTgtName && script->OverwriteOlder)
     {
         HANDLE find;
-        find = HANDLES_Q(FindFirstFile(op->TargetName, &dataOut));
+        find = SalFindFirstFileH(op->TargetName, &dataOut);
         if (find != INVALID_HANDLE_VALUE)
         {
             HANDLES(FindClose(find));
@@ -4459,7 +4453,7 @@ BOOL DoCopyFile(COperation* op, HWND hProgressDlg, void* buffer,
             if (StrICmp(tgtName, dataOut.cFileName) == 0 &&                 // ensure it is not just a DOS-name match (that would change the DOS-name instead of overwriting)
                 (dataOut.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0) // ensure it is not a directory (overwrite-older cannot help there)
             {
-                find = HANDLES_Q(FindFirstFile(op->SourceName, &dataIn));
+                find = SalFindFirstFileH(op->SourceName, &dataIn);
                 if (find != INVALID_HANDLE_VALUE)
                 {
                     HANDLES(FindClose(find));
@@ -4552,9 +4546,9 @@ COPY_AGAIN:
     {
         if (!invalidSrcName && !asyncPar->Failed())
         {
-            in = HANDLES_Q(CreateFile(op->SourceName, GENERIC_READ,
-                                      FILE_SHARE_READ | FILE_SHARE_WRITE, NULL,
-                                      OPEN_EXISTING, asyncPar->GetOverlappedFlag() | FILE_FLAG_SEQUENTIAL_SCAN, NULL));
+            in = SalCreateFileH(op->SourceName, GENERIC_READ,
+                                FILE_SHARE_READ | FILE_SHARE_WRITE, NULL,
+                                OPEN_EXISTING, asyncPar->GetOverlappedFlag() | FILE_FLAG_SEQUENTIAL_SCAN, NULL);
         }
         else
         {
@@ -5149,8 +5143,8 @@ COPY_AGAIN:
                                 GetFileOverwriteInfo(sAttr, _countof(sAttr), in, op->SourceName, &sFileTime, &getTimeFailed);
                                 HANDLES(CloseHandle(in));
                                 in = NULL;
-                                out = HANDLES_Q(CreateFile(op->TargetName, 0, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL,
-                                                           OPEN_EXISTING, 0, NULL));
+                                out = SalCreateFileH(op->TargetName, 0, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL,
+                                                     OPEN_EXISTING, 0, NULL);
                                 if (out != INVALID_HANDLE_VALUE)
                                 {
                                     GetFileOverwriteInfo(tAttr, _countof(tAttr), out, op->TargetName, &tFileTime, &getTimeFailed);
@@ -5202,9 +5196,9 @@ COPY_AGAIN:
                                 case IDYES:
                                 default: // for safety (to prevent exiting this block with the 'in' handle closed)
                                 {
-                                    in = HANDLES_Q(CreateFile(op->SourceName, GENERIC_READ,
-                                                              FILE_SHARE_READ | FILE_SHARE_WRITE, NULL,
-                                                              OPEN_EXISTING, asyncPar->GetOverlappedFlag() | FILE_FLAG_SEQUENTIAL_SCAN, NULL));
+                                    in = SalCreateFileH(op->SourceName, GENERIC_READ,
+                                                        FILE_SHARE_READ | FILE_SHARE_WRITE, NULL,
+                                                        OPEN_EXISTING, asyncPar->GetOverlappedFlag() | FILE_FLAG_SEQUENTIAL_SCAN, NULL);
                                     if (in == INVALID_HANDLE_VALUE)
                                         goto OPEN_IN_ERROR;
                                     break;
@@ -5263,9 +5257,9 @@ COPY_AGAIN:
                                     case IDYES:
                                     default: // for safety (to prevent exiting this block with the 'in' handle closed)
                                     {
-                                        in = HANDLES_Q(CreateFile(op->SourceName, GENERIC_READ,
-                                                                  FILE_SHARE_READ | FILE_SHARE_WRITE, NULL,
-                                                                  OPEN_EXISTING, asyncPar->GetOverlappedFlag() | FILE_FLAG_SEQUENTIAL_SCAN, NULL));
+                                        in = SalCreateFileH(op->SourceName, GENERIC_READ,
+                                                            FILE_SHARE_READ | FILE_SHARE_WRITE, NULL,
+                                                            OPEN_EXISTING, asyncPar->GetOverlappedFlag() | FILE_FLAG_SEQUENTIAL_SCAN, NULL);
                                         if (in == INVALID_HANDLE_VALUE)
                                             goto OPEN_IN_ERROR;
                                         attr = SalGetFileAttributes(op->TargetName); // refresh attributes in case the user changed them
@@ -5313,8 +5307,8 @@ COPY_AGAIN:
                                     CQuadWord origFileSize(0, 0); // file size before truncation
                                     if (mustDeleteFileBeforeOverwrite == 0 /* need test */)
                                     {
-                                        out = HANDLES_Q(CreateFile(op->TargetName, 0, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL,
-                                                                   OPEN_EXISTING, 0, NULL));
+                                        out = SalCreateFileH(op->TargetName, 0, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL,
+                                                             OPEN_EXISTING, 0, NULL);
                                         if (out != INVALID_HANDLE_VALUE)
                                         {
                                             origFileSize.LoDWord = GetFileSize(out, &origFileSize.HiDWord);
@@ -5337,15 +5331,15 @@ COPY_AGAIN:
                                     fileAttrs = asyncPar->GetOverlappedFlag() | FILE_FLAG_SEQUENTIAL_SCAN |
                                                 (!lossEncryptionAttr && copyAsEncrypted ? FILE_ATTRIBUTE_ENCRYPTED : 0) | // setting attributes during CREATE_ALWAYS works since XP and is the only way to apply Encrypted attribute when the file denies read access
                                                 (script->CopyAttrs ? (op->Attr & (FILE_ATTRIBUTE_COMPRESSED | (lossEncryptionAttr ? 0 : FILE_ATTRIBUTE_ENCRYPTED))) : 0);
-                                    out = HANDLES_Q(CreateFile(op->TargetName, access, 0, NULL, CREATE_ALWAYS, fileAttrs, NULL));
+                                    out = SalCreateFileH(op->TargetName, access, 0, NULL, CREATE_ALWAYS, fileAttrs, NULL);
                                     if (out == INVALID_HANDLE_VALUE && fileAttrs != (asyncPar->GetOverlappedFlag() | FILE_FLAG_SEQUENTIAL_SCAN)) // when the target disk cannot create an Encrypted file (observed on NTFS network disk (tested on share from XP) while logged in under a different username than we have in the system (on the current console) - the remote machine has a same-named user without a password, so it cannot be used over the network)
-                                        out = HANDLES_Q(CreateFile(op->TargetName, access, 0, NULL, CREATE_ALWAYS, asyncPar->GetOverlappedFlag() | FILE_FLAG_SEQUENTIAL_SCAN, NULL));
+                                        out = SalCreateFileH(op->TargetName, access, 0, NULL, CREATE_ALWAYS, asyncPar->GetOverlappedFlag() | FILE_FLAG_SEQUENTIAL_SCAN, NULL);
                                     if (script->CopyAttrs && out == INVALID_HANDLE_VALUE)
                                     { // if read access to the directory is denied (we added it only for setting the Compressed attribute), try opening the file for write only
                                         access = GENERIC_WRITE;
-                                        out = HANDLES_Q(CreateFile(op->TargetName, access, 0, NULL, CREATE_ALWAYS, fileAttrs, NULL));
+                                        out = SalCreateFileH(op->TargetName, access, 0, NULL, CREATE_ALWAYS, fileAttrs, NULL);
                                         if (out == INVALID_HANDLE_VALUE && fileAttrs != (asyncPar->GetOverlappedFlag() | FILE_FLAG_SEQUENTIAL_SCAN)) // when the target disk cannot create an Encrypted file (observed on NTFS network disk (tested on share from XP) while logged in under a different username than we have in the system (on the current console) - the remote machine has a same-named user without a password, so it cannot be used over the network)
-                                            out = HANDLES_Q(CreateFile(op->TargetName, access, 0, NULL, CREATE_ALWAYS, asyncPar->GetOverlappedFlag() | FILE_FLAG_SEQUENTIAL_SCAN, NULL));
+                                            out = SalCreateFileH(op->TargetName, access, 0, NULL, CREATE_ALWAYS, asyncPar->GetOverlappedFlag() | FILE_FLAG_SEQUENTIAL_SCAN, NULL);
                                     }
                                     if (out == INVALID_HANDLE_VALUE) // target file cannot be opened for writing, so delete it and create it again
                                     {
@@ -5377,7 +5371,7 @@ COPY_AGAIN:
                                     if (mustDeleteFileBeforeOverwrite == 0 /* need test */)
                                     {
                                         HANDLES(CloseHandle(out));
-                                        out = HANDLES_Q(CreateFile(op->TargetName, access, 0, NULL, OPEN_ALWAYS, asyncPar->GetOverlappedFlag() | FILE_FLAG_SEQUENTIAL_SCAN, NULL));
+                                        out = SalCreateFileH(op->TargetName, access, 0, NULL, OPEN_ALWAYS, asyncPar->GetOverlappedFlag() | FILE_FLAG_SEQUENTIAL_SCAN, NULL);
                                         if (out == INVALID_HANDLE_VALUE) // cannot reopen the target file we just opened, unlikely, try deleting and recreating it
                                         {
                                             targetCannotOpenForWrite = TRUE;
@@ -5753,7 +5747,7 @@ BOOL DoMoveFile(COperation* op, HWND hProgressDlg, void* buffer,
                     targetNameMvDir == op->TargetName) // no invalid names are allowed here
                 {
                     WIN32_FIND_DATA findData;
-                    HANDLE find = HANDLES_Q(FindFirstFile(op->TargetName, &findData));
+                    HANDLE find = SalFindFirstFileH(op->TargetName, &findData);
                     if (find != INVALID_HANDLE_VALUE)
                     {
                         HANDLES(FindClose(find));
@@ -5823,15 +5817,15 @@ BOOL DoMoveFile(COperation* op, HWND hProgressDlg, void* buffer,
                     sourceNameMvDir == op->SourceName && targetNameMvDir == op->TargetName) // no invalid names allowed here (files only, and their names are validated)
                 {
                     HANDLE in, out;
-                    in = HANDLES_Q(CreateFile(op->SourceName, 0, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL,
-                                              OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL));
+                    in = SalCreateFileH(op->SourceName, 0, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL,
+                                        OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
                     if (in == INVALID_HANDLE_VALUE)
                     {
                         err = GetLastError();
                         goto NORMAL_ERROR;
                     }
-                    out = HANDLES_Q(CreateFile(op->TargetName, 0, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL,
-                                               OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL));
+                    out = SalCreateFileH(op->TargetName, 0, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL,
+                                         OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
                     if (out == INVALID_HANDLE_VALUE)
                     {
                         err = GetLastError();
@@ -6312,7 +6306,7 @@ BOOL SalCreateDirectoryEx(const char* name, DWORD* err)
              errLoc == ERROR_ALREADY_EXISTS))
         {
             WIN32_FIND_DATA data;
-            HANDLE find = HANDLES_Q(FindFirstFile(name, &data));
+            HANDLE find = SalFindFirstFileH(name, &data);
             if (find != INVALID_HANDLE_VALUE)
             {
                 HANDLES(FindClose(find));
@@ -6382,11 +6376,10 @@ BOOL SalCreateDirectoryEx(const char* name, DWORD* err)
 BOOL GetDirTime(const char* dirName, FILETIME* ftModified)
 {
     HANDLE dir;
-    dir = HANDLES_Q(CreateFile(dirName, GENERIC_READ,
-                               FILE_SHARE_READ | FILE_SHARE_WRITE,
-                               NULL, OPEN_EXISTING,
-                               FILE_FLAG_BACKUP_SEMANTICS,
-                               NULL));
+    dir = SalCreateFileH(dirName, GENERIC_READ,
+                         FILE_SHARE_READ | FILE_SHARE_WRITE,
+                         NULL, OPEN_EXISTING,
+                         FILE_FLAG_BACKUP_SEMANTICS, NULL);
     if (dir != INVALID_HANDLE_VALUE)
     {
         BOOL ret = GetFileTime(dir, NULL /*ftCreated*/, NULL /*ftAccessed*/, ftModified);
@@ -6414,11 +6407,10 @@ BOOL DoCopyDirTime(HWND hProgressDlg, const char* targetName, FILETIME* modified
         setAttr = TRUE;
     }
     HANDLE file;
-    file = HANDLES_Q(CreateFile(targetNameCrFile, GENERIC_WRITE,
-                                FILE_SHARE_READ | FILE_SHARE_WRITE,
-                                NULL, OPEN_EXISTING,
-                                FILE_FLAG_BACKUP_SEMANTICS,
-                                NULL));
+    file = SalCreateFileH(targetNameCrFile, GENERIC_WRITE,
+                          FILE_SHARE_READ | FILE_SHARE_WRITE,
+                          NULL, OPEN_EXISTING,
+                          FILE_FLAG_BACKUP_SEMANTICS, NULL);
     if (file != INVALID_HANDLE_VALUE)
     {
         if (SetFileTime(file, NULL /*&ftCreated*/, NULL /*&ftAccessed*/, modified))
@@ -6994,8 +6986,8 @@ BOOL DoDeleteDirLinkAux(const char* nameDelLink, DWORD* err)
     DWORD attr = GetFileAttributes(nameDelLink);
     if (attr != INVALID_FILE_ATTRIBUTES && (attr & FILE_ATTRIBUTE_REPARSE_POINT))
     {
-        HANDLE dir = HANDLES_Q(CreateFile(nameDelLink, GENERIC_WRITE /* | GENERIC_READ */, 0, 0, OPEN_EXISTING,
-                                          FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT, NULL));
+        HANDLE dir = SalCreateFileH(nameDelLink, GENERIC_WRITE /* | GENERIC_READ */, 0, 0, OPEN_EXISTING,
+                                     FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OPEN_REPARSE_POINT, NULL);
         if (dir != INVALID_HANDLE_VALUE)
         {
             DWORD dummy;
@@ -7159,9 +7151,9 @@ CONVERT_AGAIN:
         HANDLE hSource;
         if (!invalidName)
         {
-            hSource = HANDLES_Q(CreateFile(name, GENERIC_READ,
-                                           FILE_SHARE_READ | FILE_SHARE_WRITE, NULL,
-                                           OPEN_EXISTING, FILE_FLAG_SEQUENTIAL_SCAN, NULL));
+            hSource = SalCreateFileH(name, GENERIC_READ,
+                                     FILE_SHARE_READ | FILE_SHARE_WRITE, NULL,
+                                     OPEN_EXISTING, FILE_FLAG_SEQUENTIAL_SCAN, NULL);
         }
         else
         {
@@ -7230,8 +7222,8 @@ CONVERT_AGAIN:
                     }
 
                     // open the empty temporary file
-                    HANDLE hTarget = HANDLES_Q(CreateFile(tmpFileName, GENERIC_WRITE, 0, NULL,
-                                                          OPEN_EXISTING, FILE_FLAG_SEQUENTIAL_SCAN, NULL));
+                    HANDLE hTarget = SalCreateFileH(tmpFileName, GENERIC_WRITE, 0, NULL,
+                                                    OPEN_EXISTING, FILE_FLAG_SEQUENTIAL_SCAN, NULL);
                     if (hTarget != INVALID_HANDLE_VALUE)
                     {
                         DWORD read;
@@ -7723,9 +7715,9 @@ BOOL DoChangeAttrs(HWND hProgressDlg, char* name, const CQuadWord& size, DWORD a
                 HANDLE file;
                 if (attrs & FILE_ATTRIBUTE_READONLY)
                     SetFileAttributes(nameSetAttrs, attrs & (~FILE_ATTRIBUTE_READONLY));
-                file = HANDLES_Q(CreateFile(nameSetAttrs, GENERIC_READ | GENERIC_WRITE,
-                                            FILE_SHARE_READ | FILE_SHARE_WRITE,
-                                            NULL, OPEN_EXISTING, isDir ? FILE_FLAG_BACKUP_SEMANTICS : 0, NULL));
+                file = SalCreateFileH(nameSetAttrs, GENERIC_READ | GENERIC_WRITE,
+                                      FILE_SHARE_READ | FILE_SHARE_WRITE,
+                                      NULL, OPEN_EXISTING, isDir ? FILE_FLAG_BACKUP_SEMANTICS : 0, NULL);
                 if (file != INVALID_HANDLE_VALUE)
                 {
                     FILETIME ftCreated, ftAccessed, ftModified;

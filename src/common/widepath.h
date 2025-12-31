@@ -122,6 +122,10 @@ BOOL SalLPCopyFile(const char* existingFileName, const char* newFileName, BOOL f
 // Note: Returns wide find data; caller must convert if needed
 HANDLE SalLPFindFirstFile(const char* fileName, WIN32_FIND_DATAW* findData);
 
+// FindFirstFile wrapper that supports long paths with ANSI find data
+// Converts result back to ANSI WIN32_FIND_DATA for compatibility
+HANDLE SalLPFindFirstFileA(const char* fileName, WIN32_FIND_DATAA* findData);
+
 // FindNextFile (standard API, no wrapper needed since handle is already wide)
 // Use standard FindNextFileW with handle from SalFindFirstFile
 
@@ -151,9 +155,20 @@ HANDLE SalLPCreateFileTracked(
     const char* srcFile,
     int srcLine);
 
+// FindFirstFile with handle tracking - use instead of HANDLES_Q(FindFirstFile(...))
+#define SalFindFirstFileH(fileName, findData) \
+    SalLPFindFirstFileTracked(fileName, findData, __FILE__, __LINE__)
+
+HANDLE SalLPFindFirstFileTracked(
+    const char* fileName,
+    WIN32_FIND_DATAA* findData,
+    const char* srcFile,
+    int srcLine);
+
 #else // !HANDLES_ENABLE
 
 // In release builds, just use the regular wrapper
 #define SalCreateFileH SalLPCreateFile
+#define SalFindFirstFileH SalLPFindFirstFileA
 
 #endif // HANDLES_ENABLE

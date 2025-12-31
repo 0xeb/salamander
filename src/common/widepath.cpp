@@ -268,6 +268,35 @@ HANDLE SalLPFindFirstFile(const char* fileName, WIN32_FIND_DATAW* findData)
     return FindFirstFileW(widePath.Get(), findData);
 }
 
+HANDLE SalLPFindFirstFileA(const char* fileName, WIN32_FIND_DATAA* findData)
+{
+    SalWidePath widePath(fileName);
+    if (!widePath.IsValid())
+    {
+        return INVALID_HANDLE_VALUE;
+    }
+
+    WIN32_FIND_DATAW findDataW;
+    HANDLE h = FindFirstFileW(widePath.Get(), &findDataW);
+    if (h != INVALID_HANDLE_VALUE && findData != NULL)
+    {
+        // Convert wide find data to ANSI
+        findData->dwFileAttributes = findDataW.dwFileAttributes;
+        findData->ftCreationTime = findDataW.ftCreationTime;
+        findData->ftLastAccessTime = findDataW.ftLastAccessTime;
+        findData->ftLastWriteTime = findDataW.ftLastWriteTime;
+        findData->nFileSizeHigh = findDataW.nFileSizeHigh;
+        findData->nFileSizeLow = findDataW.nFileSizeLow;
+        findData->dwReserved0 = findDataW.dwReserved0;
+        findData->dwReserved1 = findDataW.dwReserved1;
+        WideCharToMultiByte(CP_ACP, 0, findDataW.cFileName, -1,
+                            findData->cFileName, MAX_PATH, NULL, NULL);
+        WideCharToMultiByte(CP_ACP, 0, findDataW.cAlternateFileName, -1,
+                            findData->cAlternateFileName, 14, NULL, NULL);
+    }
+    return h;
+}
+
 //
 // Handle-tracking variant (debug builds only)
 //
@@ -295,6 +324,22 @@ HANDLE SalLPCreateFileTracked(
     DWORD err = GetLastError();
     __Handles.SetInfo(srcFile, srcLine, __otQuiet)
         .CheckCreate(h != INVALID_HANDLE_VALUE, __htFile, __hoCreateFile, h, err, TRUE);
+
+    return h;
+}
+
+HANDLE SalLPFindFirstFileTracked(
+    const char* fileName,
+    WIN32_FIND_DATAA* findData,
+    const char* srcFile,
+    int srcLine)
+{
+    HANDLE h = SalLPFindFirstFileA(fileName, findData);
+
+    // Track the handle using Salamander's handle tracking system
+    DWORD err = GetLastError();
+    __Handles.SetInfo(srcFile, srcLine, __otQuiet)
+        .CheckCreate(h != INVALID_HANDLE_VALUE, __htFind, __hoFindFirstFile, h, err, TRUE);
 
     return h;
 }
