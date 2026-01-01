@@ -10,6 +10,7 @@
 #include "pack.h"
 #include "codetbl.h"
 #include "dialogs.h"
+#include "common/widepath.h"
 
 CSystemPolicies SystemPolicies;
 
@@ -19,7 +20,7 @@ const int ctsCanTerminate = 0x02; // muze byt terminovan - uz se nainicializoval
 
 HANDLE ThreadCheckPath[NUM_OF_CHECKTHREADS];
 int ThreadCheckState[NUM_OF_CHECKTHREADS]; // stav jednotlivych threadu
-char ThreadPath[MAX_PATH];                 // vstup aktivniho threadu
+char ThreadPath[SAL_MAX_LONG_PATH];        // vstup aktivniho threadu
 BOOL ThreadValid;                          // vysledek aktivniho threadu
 DWORD ThreadLastError;                     // vysledek aktivniho threadu
 
@@ -126,7 +127,7 @@ unsigned ThreadCheckPathFBody(void* param) // test pristupnosti adresare
 {
     CALL_STACK_MESSAGE1("ThreadCheckPathFBody()");
     int i = (int)(INT_PTR)param;
-    char threadPath[MAX_PATH + 5];
+    CPathBuffer threadPath;
 
     SetThreadNameInVCAndTrace("CheckPath");
     //  if (i == 0) TRACE_I("First check-path thread: Begin");
@@ -169,7 +170,7 @@ CPF_AGAIN:
         strcpy(root + 1, ":\\");
         if (GetDriveType(root) == DRIVE_FIXED)
         {
-            SalPathAppend(threadPath, "*", MAX_PATH + 5);
+            SalPathAppend(threadPath, "*", threadPath.Size());
             WIN32_FIND_DATA data;
             HANDLE find = HANDLES_Q(FindFirstFile(threadPath, &data));
             if (find != INVALID_HANDLE_VALUE)
@@ -274,7 +275,7 @@ RETRY:
 
     if (err == ERROR_SUCCESS)
     {
-        lstrcpyn(ThreadPath, path, MAX_PATH);
+        lstrcpyn(ThreadPath, path, SAL_MAX_LONG_PATH);
 
     TEST_AGAIN:
 
@@ -1493,10 +1494,17 @@ DWORD SalGetFileAttributes(const char* fileName)
     // mezery/tecky orizne a pracuje tak s jinou cestou + u souboru to sice nefunguje,
     // ale porad lepsi nez ziskat atributy jineho souboru/adresare (pro "c:\\file.txt   "
     // pracuje se jmenem "c:\\file.txt")
-    char fileNameCopy[3 * MAX_PATH];
-    MakeCopyWithBackslashIfNeeded(fileName, fileNameCopy);
+    int nameLen = (int)strlen(fileName);
+    if (nameLen > 0 && (fileName[nameLen - 1] <= ' ' || fileName[nameLen - 1] == '.'))
+    {
+        CPathBuffer fileNameCopy(fileName);
+        fileNameCopy[nameLen] = '\\';
+        fileNameCopy[nameLen + 1] = 0;
+        return SalLPGetFileAttributes(fileNameCopy);
+    }
 
-    return GetFileAttributes(fileName);
+    // Use long path wrapper to support paths > MAX_PATH
+    return SalLPGetFileAttributes(fileName);
 }
 
 BOOL ClearReadOnlyAttr(const char* name, DWORD attr)

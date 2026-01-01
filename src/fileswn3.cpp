@@ -17,6 +17,7 @@
 #include "snooper.h"
 #include "zip.h"
 #include "shiconov.h"
+#include "common/widepath.h"
 
 //
 // ****************************************************************************
@@ -89,7 +90,7 @@ BOOL CFilesWindow::ReadDirectory(HWND parent, BOOL isRefresh)
     DeleteColumnsWithoutData();                      // removing columns for which we don't have data (empty values would be shown in them)
     GetPluginIconIndex = InternalGetPluginIconIndex; // setting standard callback (just returns zero)
 
-    char fileName[MAX_PATH + 4];
+    CPathBuffer fileName;
 
     if (Is(ptDisk))
     {
@@ -276,8 +277,8 @@ BOOL CFilesWindow::ReadDirectory(HWND parent, BOOL isRefresh)
     _TRY_AGAIN:
 
         // after 2000 ms we will show a window with a cancel prompt
-        char buf[2 * MAX_PATH + 100];
-        sprintf(buf, LoadStr(IDS_READINGPATHESC), GetPath());
+        CPathBuffer buf;
+        _snprintf_s(buf, buf.Size(), _TRUNCATE, LoadStr(IDS_READINGPATHESC), GetPath());
         CreateSafeWaitWindow(buf, NULL, 2000, TRUE, MainWindow->HWindow);
 
         DWORD lastEscCheckTime;
@@ -292,7 +293,7 @@ BOOL CFilesWindow::ReadDirectory(HWND parent, BOOL isRefresh)
         BOOL isUpDir = FALSE;
         WIN32_FIND_DATA fileData;
         HANDLE search;
-        search = HANDLES_Q(FindFirstFile(fileName, &fileData));
+        search = SalFindFirstFileH(fileName, &fileData);
         if (search == INVALID_HANDLE_VALUE)
         {
             DWORD err = GetLastError();
@@ -843,7 +844,7 @@ BOOL CFilesWindow::ReadDirectory(HWND parent, BOOL isRefresh)
 #endif                     // _WIN64
                     break; // the second pass (adding ".." or win64 redirected-dir)
                 }
-            } while (FindNextFile(search, &fileData));
+            } while (SalLPFindNextFileA(search, &fileData));
             DWORD err = GetLastError();
 
             if (search != NULL) // the first pass
@@ -1769,8 +1770,7 @@ BOOL ContainsWin64RedirectedDir(CFilesWindow* panel, int* indexes, int count, ch
     redirectedDir[0] = 0;
     if (Windows64Bit && WindowsDirectory[0] != 0)
     {
-        char path[MAX_PATH];
-        lstrcpyn(path, panel->GetPath(), MAX_PATH);
+        CPathBuffer path(panel->GetPath());
         char* pathEnd = path + strlen(path);
         int i;
         for (i = 0; i < count; i++)
@@ -1781,7 +1781,7 @@ BOOL ContainsWin64RedirectedDir(CFilesWindow* panel, int* indexes, int count, ch
                 if (dir->IsLink) // all pseudo-directories have IsLink set
                 {
                     *pathEnd = 0;
-                    if (SalPathAppend(path, dir->Name, MAX_PATH) &&
+                    if (SalPathAppend(path, dir->Name, path.Size()) &&
                         IsWin64RedirectedDir(path, NULL, onlyAdded))
                     {
                         lstrcpyn(redirectedDir, dir->Name, MAX_PATH);
@@ -1811,13 +1811,12 @@ BOOL AddWin64RedirectedDirAux(const char* path, const char* subDir, const char* 
                 break;
             }
 
-        char findPath[MAX_PATH];
-        lstrcpyn(findPath, path, MAX_PATH);
-        if (SalPathAppend(findPath, redirectedDirLastComp, MAX_PATH) &&
-            SalPathAppend(findPath, "*", MAX_PATH))
+        CPathBuffer findPath(path);
+        if (SalPathAppend(findPath, redirectedDirLastComp, findPath.Size()) &&
+            SalPathAppend(findPath, "*", findPath.Size()))
         {
             HANDLE h;
-            h = HANDLES_Q(FindFirstFile(findPath, fileData)); // find-data for redirected-dir can be obtained from the "." directory in the listing of redirected-dir
+            h = SalFindFirstFileH(findPath, fileData); // find-data for redirected-dir can be obtained from the "." directory in the listing of redirected-dir
             if (h != INVALID_HANDLE_VALUE)
             {
                 BOOL found = FALSE;
@@ -1829,7 +1828,7 @@ BOOL AddWin64RedirectedDirAux(const char* path, const char* subDir, const char* 
                         found = TRUE;
                         break;
                     }
-                } while (FindNextFile(h, fileData));
+                } while (SalLPFindNextFileA(h, fileData));
                 HANDLES(FindClose(h));
                 if (found)
                 {
@@ -1841,7 +1840,7 @@ BOOL AddWin64RedirectedDirAux(const char* path, const char* subDir, const char* 
                     if (CutDirectory(findPath)) // find out if there's a directory with the same name as redirected-dir on the disk (it does not need to be in the 'dirs' array, e.g. because of the command "Hide Selected Names")
                     {
                         WIN32_FIND_DATA fd;
-                        h = HANDLES_Q(FindFirstFile(findPath, &fd));
+                        h = SalFindFirstFileH(findPath, &fd);
                         if (h != INVALID_HANDLE_VALUE)
                         {
                             HANDLES(FindClose(h));
@@ -1909,10 +1908,10 @@ BOOL CFilesWindow::ChangeDir(const char* newDir, int suggestedTopIndex, const ch
     }
 
     MainWindow->CancelPanelsUI(); // cancel QuickSearch and QuickEdit
-    char absFSPath[MAX_PATH];
-    char path[2 * MAX_PATH];
-    char errBuf[3 * MAX_PATH + 100];
-    GetGeneralPath(path, 2 * MAX_PATH, TRUE);
+    CPathBuffer absFSPath;
+    CPathBuffer path;
+    CPathBuffer errBuf;
+    GetGeneralPath(path, path.Size(), TRUE);
     BOOL sendDirectlyToPlugin = FALSE;
     CChangeDirDlg dlg(HWindow, path, MainWindow->GetActivePanel()->Is(ptPluginFS) ? &sendDirectlyToPlugin : NULL);
 
@@ -1931,8 +1930,11 @@ CHANGE_AGAIN:
         {
             convertFSPathToInternal = TRUE; // after input from user, conversion to internal format is necessary
             // postprocessing will be done only for path, which is not to be sent directly to plugin
-            if (!sendDirectlyToPlugin && !PostProcessPathFromUser(HWindow, path))
+            char tempPathBuff[2 * MAX_PATH];
+            lstrcpyn(tempPathBuff, path, 2 * MAX_PATH);
+            if (!sendDirectlyToPlugin && !PostProcessPathFromUser(HWindow, tempPathBuff))
                 goto CHANGE_AGAIN;
+            lstrcpyn(path, tempPathBuff, path.Size());
         }
         BOOL sendDirectlyToPluginLocal = sendDirectlyToPlugin;
         TopIndexMem.Clear(); // long jump
@@ -1941,7 +1943,7 @@ CHANGE_AGAIN:
 
         UpdateWindow(MainWindow->HWindow);
         if (newDir != NULL)
-            lstrcpyn(path, newDir, 2 * MAX_PATH);
+            lstrcpyn(path, newDir, path.Size());
         else // focus and top-index setting won't be done for path from dialog
         {
             suggestedTopIndex = -1;
@@ -1954,7 +1956,7 @@ CHANGE_AGAIN:
         {
             if (strlen(fsUserPart) >= MAX_PATH) // plugins do not count with longer path
             {
-                sprintf(errBuf, LoadStr(IDS_PATHERRORFORMAT), path, LoadStr(IDS_TOOLONGPATH));
+                _snprintf_s(errBuf, errBuf.Size(), _TRUNCATE, LoadStr(IDS_PATHERRORFORMAT), (const char*)path, LoadStr(IDS_TOOLONGPATH));
                 SalMessageBox(HWindow, errBuf, LoadStr(IDS_ERRORCHANGINGDIR),
                               MB_OK | MB_ICONEXCLAMATION);
                 if (newDir != NULL)
@@ -2050,7 +2052,7 @@ CHANGE_AGAIN:
             }
             else
             {
-                sprintf(errBuf, LoadStr(IDS_PATHERRORFORMAT), path, LoadStr(IDS_NOTPLUGINFS));
+                _snprintf_s(errBuf, errBuf.Size(), _TRUNCATE, LoadStr(IDS_PATHERRORFORMAT), (const char*)path, LoadStr(IDS_NOTPLUGINFS));
                 SalMessageBox(HWindow, errBuf, LoadStr(IDS_ERRORCHANGINGDIR),
                               MB_OK | MB_ICONEXCLAMATION);
                 if (newDir != NULL)
@@ -2077,31 +2079,31 @@ CHANGE_AGAIN:
             int errTextID;
             const char* text = NULL;                 // caution: textFailReason must be set
             int textFailReason = CHPPFR_INVALIDPATH; // if text != NULL, it contains the code of error which occurred
-            char curPath[2 * MAX_PATH];
+            CPathBuffer curPath;
             curPath[0] = 0;
             if (sendDirectlyToPluginLocal)
                 errTextID = IDS_INCOMLETEFILENAME;
             else
             {
-                //        MainWindow->GetActivePanel()->GetGeneralPath(curPath, 2 * MAX_PATH);
+                //        MainWindow->GetActivePanel()->GetGeneralPath(curPath, curPath.Size());
                 //        if (!SalGetFullName(path, &errTextID, (MainWindow->GetActivePanel()->Is(ptDisk) ||
                 //                            MainWindow->GetActivePanel()->Is(ptZIPArchive)) ? curPath : NULL))
                 if (Is(ptDisk) || Is(ptZIPArchive))
-                    GetGeneralPath(curPath, 2 * MAX_PATH); // because of FTP plugin - relative path in "target panel path" when connecting
+                    GetGeneralPath(curPath, curPath.Size()); // because of FTP plugin - relative path in "target panel path" when connecting
             }
             BOOL callNethood = FALSE;
             if (sendDirectlyToPluginLocal ||
-                !SalGetFullName(path, &errTextID, (Is(ptDisk) || Is(ptZIPArchive)) ? curPath : NULL, NULL,
-                                &callNethood, 2 * MAX_PATH))
+                !SalGetFullName(path, &errTextID, (Is(ptDisk) || Is(ptZIPArchive)) ? (const char*)curPath : NULL, NULL,
+                                &callNethood, path.Size()))
             {
                 sendDirectlyToPluginLocal = FALSE;
                 if ((errTextID == IDS_SERVERNAMEMISSING || errTextID == IDS_SHARENAMEMISSING) && callNethood)
                 { // incomplete UNC path will be given to the first plugin which supports FS and called SalamanderGeneral->SetPluginIsNethood()
                     if (Plugins.GetFirstNethoodPluginFSName(absFSPath))
                     {
-                        if (strlen(absFSPath) + 1 < MAX_PATH)
+                        if (strlen(absFSPath) + 1 < (size_t)absFSPath.Size())
                             strcat(absFSPath, ":");
-                        if (strlen(absFSPath) + strlen(path) < MAX_PATH)
+                        if (strlen(absFSPath) + strlen(path) < (size_t)absFSPath.Size())
                             strcat(absFSPath, path);
                         if (newDir != NULL)
                             newDir = absFSPath; // in case that the path is entered from outside
@@ -2124,11 +2126,11 @@ CHANGE_AGAIN:
                         MainWindow->GetActivePanel()->GetPluginFS()->NotEmpty())
                     {
                         BOOL success = TRUE;
-                        if ((int)strlen(path) < MAX_PATH)
+                        if ((int)strlen(path) < absFSPath.Size())
                             strcpy(absFSPath, path);
                         else
                         {
-                            sprintf(errBuf, LoadStr(IDS_PATHERRORFORMAT), path, LoadStr(IDS_TOOLONGPATH));
+                            _snprintf_s(errBuf, errBuf.Size(), _TRUNCATE, LoadStr(IDS_PATHERRORFORMAT), (const char*)path, LoadStr(IDS_TOOLONGPATH));
                             SalMessageBox(HWindow, errBuf, LoadStr(IDS_ERRORCHANGINGDIR),
                                           MB_OK | MB_ICONEXCLAMATION);
                             success = FALSE;
@@ -2170,7 +2172,7 @@ CHANGE_AGAIN:
             {
                 if (*path != 0 && path[1] == ':')
                     path[0] = UpperCase[path[0]]; // "c:" path will be "C:"
-                char copy[2 * MAX_PATH + 10];
+                CPathBuffer copy;
                 int len = GetRootPath(copy, path);
 
                 if (!CheckAndRestorePath(copy))
@@ -2205,9 +2207,9 @@ CHANGE_AGAIN:
                         DWORD copyAttr;
                         int copyLen;
                         copyLen = (int)strlen(copy);
-                        if (copyLen >= MAX_PATH)
+                        if (copyLen >= copy.Size() - 1)
                         {
-                            if (*end != 0 && !SalPathAppend(copy, end + 1, 2 * MAX_PATH)) // if the so far processed part of the path is enlengthened and the rest of the path does not fit, we will use the original form of the path
+                            if (*end != 0 && !SalPathAppend(copy, end + 1, copy.Size())) // if the so far processed part of the path is enlengthened and the rest of the path does not fit, we will use the original form of the path
                                 strcpy(copy, path);
                             text = LoadStr(IDS_TOOLONGPATH);
                             textFailReason = CHPPFR_INVALIDPATH;
@@ -2246,7 +2248,7 @@ CHANGE_AGAIN:
                                     memcpy(st, s, end - s);
                                     st[end - s] = 0;
                                     s = end;
-                                    if ((int)strlen(copy) >= MAX_PATH) // too long path, we're finished...
+                                    if ((int)strlen(copy) >= copy.Size() - 1) // too long path, we're finished...
                                     {
                                         h = INVALID_HANDLE_VALUE;
                                         break;
@@ -2264,7 +2266,7 @@ CHANGE_AGAIN:
                                 }
                                 if (*end == 0 && h == INVALID_HANDLE_VALUE) // another accessible component not found, we will try if the current path can be listed
                                 {
-                                    if ((int)strlen(copy) < MAX_PATH && SalPathAppend(copy, "*.*", MAX_PATH + 10))
+                                    if ((int)strlen(copy) < copy.Size() - 10 && SalPathAppend(copy, "*.*", copy.Size()))
                                     {
                                         h = HANDLES_Q(FindFirstFile(copy, &find));
                                         CutDirectory(copy);
@@ -2327,9 +2329,9 @@ CHANGE_AGAIN:
                             { // file -> is it an archive?
                                 if (PackerFormatConfig.PackIsArchive(copy))
                                 {
-                                    if ((int)strlen(*end != 0 ? end + 1 : end) >= MAX_PATH) // too long path in archive
+                                    if ((int)strlen(*end != 0 ? end + 1 : end) >= MAX_PATH) // too long path in archive (plugins expect MAX_PATH)
                                     {
-                                        if (!SalPathAppend(copy, end + 1, 2 * MAX_PATH)) // if the archive name is enlengthened and the rest of the path does not fit, we will use the original form of the path
+                                        if (!SalPathAppend(copy, end + 1, copy.Size())) // if the archive name is enlengthened and the rest of the path does not fit, we will use the original form of the path
                                             strcpy(copy, path);
                                         text = LoadStr(IDS_TOOLONGPATH);
                                         textFailReason = CHPPFR_INVALIDPATH;
@@ -2345,7 +2347,7 @@ CHANGE_AGAIN:
                                                                        FALSE, NULL, TRUE, &localFailReason, FALSE, TRUE);
                                         if (!ret && localFailReason == CHPPFR_SHORTERPATH)
                                         {
-                                            sprintf(errBuf, LoadStr(IDS_PATHINARCHIVENOTFOUND), end);
+                                            _snprintf_s(errBuf, errBuf.Size(), _TRUNCATE, LoadStr(IDS_PATHINARCHIVENOTFOUND), end);
                                             SalMessageBox(HWindow, errBuf, LoadStr(IDS_ERRORCHANGINGDIR),
                                                           MB_OK | MB_ICONEXCLAMATION);
                                         }
@@ -2359,8 +2361,8 @@ CHANGE_AGAIN:
                                 else
                                 {
                                     char* name;
-                                    char shortenedPath[MAX_PATH];
-                                    strcpy(shortenedPath, copy);
+                                    CPathBuffer shortenedPath((const char*)copy);
+                                    // Note: shortenedPath is initialized from copy in constructor
                                     if (*end == 0 && CutDirectory(shortenedPath, &name)) // when the path does not end with '\\' (path to file)
                                     {
                                         // change of the path to absolute windows path + focus to the file
@@ -2391,8 +2393,8 @@ CHANGE_AGAIN:
                             {
                                 if (err == ERROR_INVALID_PARAMETER || err == ERROR_NOT_READY)
                                 {
-                                    char drive[MAX_PATH];
-                                    lstrcpyn(drive, copy, MAX_PATH);
+                                    CPathBuffer drive((const char*)copy);
+                                    // Note: drive is initialized from copy in constructor
                                     if (CutDirectory(drive))
                                     {
                                         DWORD attrs = SalGetFileAttributes(drive);
@@ -2418,13 +2420,13 @@ CHANGE_AGAIN:
                                                 GetCurrentLocalReparsePoint(copy, CheckPathRootWithRetryMsgBox);
                                                 if (strlen(CheckPathRootWithRetryMsgBox) > 3)
                                                 {
-                                                    lstrcpyn(drive, CheckPathRootWithRetryMsgBox, MAX_PATH);
+                                                    lstrcpyn(drive, CheckPathRootWithRetryMsgBox, drive.Size());
                                                     SalPathRemoveBackslash(drive);
                                                 }
                                             }
                                             else
                                                 GetRootPath(CheckPathRootWithRetryMsgBox, copy);
-                                            sprintf(errBuf, LoadStr(IDS_NODISKINDRIVE), drive);
+                                            _snprintf_s(errBuf, errBuf.Size(), _TRUNCATE, LoadStr(IDS_NODISKINDRIVE), (const char*)drive);
                                             int msgboxRes = (int)CDriveSelectErrDlg(HWindow, errBuf, copy).Execute();
                                             CheckPathRootWithRetryMsgBox[0] = 0;
                                             UpdateWindow(MainWindow->HWindow);
@@ -2448,7 +2450,7 @@ CHANGE_AGAIN:
             {
                 if (showErr)
                 {
-                    sprintf(errBuf, LoadStr(IDS_PATHERRORFORMAT), showNewDirPathInErrBoxes && newDir != NULL ? newDir : path, text);
+                    _snprintf_s(errBuf, errBuf.Size(), _TRUNCATE, LoadStr(IDS_PATHERRORFORMAT), showNewDirPathInErrBoxes && newDir != NULL ? newDir : (const char*)path, text);
                     SalMessageBox(HWindow, errBuf, LoadStr(IDS_ERRORCHANGINGDIR),
                                   MB_OK | MB_ICONEXCLAMATION);
                 }
@@ -2491,7 +2493,7 @@ BOOL CFilesWindow::ChangeDirLite(const char* newDir)
 
 BOOL CFilesWindow::ChangePathToDrvType(HWND parent, int driveType, const char* displayName)
 {
-    char path[MAX_PATH];
+    CPathBuffer path;
     const char* userFolderOneDrive = NULL;
     if (driveType == drvtOneDrive || driveType == drvtOneDriveBus)
     {
@@ -2504,11 +2506,11 @@ BOOL CFilesWindow::ChangePathToDrvType(HWND parent, int driveType, const char* d
             return FALSE;
         }
     }
-    if (driveType == drvtMyDocuments && GetMyDocumentsOrDesktopPath(path, MAX_PATH) ||
-        driveType == drvtGoogleDrive && ShellIconOverlays.GetPathForGoogleDrive(path, MAX_PATH) ||
-        driveType == drvtDropbox && strcpy_s(path, DropboxPath) == 0 ||
-        driveType == drvtOneDrive && strcpy_s(path, OneDrivePath) == 0 ||
-        driveType == drvtOneDriveBus && (int)strlen(userFolderOneDrive) < MAX_PATH && strcpy_s(path, userFolderOneDrive) == 0)
+    if (driveType == drvtMyDocuments && GetMyDocumentsOrDesktopPath(path, path.Size()) ||
+        driveType == drvtGoogleDrive && ShellIconOverlays.GetPathForGoogleDrive(path, path.Size()) ||
+        driveType == drvtDropbox && strcpy_s(path, path.Size(), DropboxPath) == 0 ||
+        driveType == drvtOneDrive && strcpy_s(path, path.Size(), OneDrivePath) == 0 ||
+        driveType == drvtOneDriveBus && (int)strlen(userFolderOneDrive) < path.Size() && strcpy_s(path, path.Size(), userFolderOneDrive) == 0)
     {
         return ChangePathToDisk(parent, path);
     }
@@ -2543,7 +2545,7 @@ void CFilesWindow::ChangeDrive(char drive)
 
         UpdateWindow(MainWindow->HWindow);
 
-        char path[MAX_PATH];
+        CPathBuffer path;
         switch (driveType)
         {
         case drvtMyDocuments:

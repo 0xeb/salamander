@@ -24,6 +24,7 @@ extern "C"
 }
 #include "salshlib.h"
 #include "shellib.h"
+#include "common/widepath.h"
 
 //
 // ****************************************************************************
@@ -58,9 +59,9 @@ void CFilesWindow::Execute(int index)
     if (index < 0 || index >= Dirs->Count + Files->Count)
         return;
 
-    char path[MAX_PATH];
-    char fullName[MAX_PATH + 10];
-    char doublePath[2 * MAX_PATH];
+    CPathBuffer path;
+    CPathBuffer fullName;
+    CPathBuffer doublePath;
     WIN32_FIND_DATA data;
 
     BeginStopRefresh();
@@ -78,18 +79,18 @@ void CFilesWindow::Execute(int index)
 
             CFileData* file = &Files->At(index - Dirs->Count);
             char* fileName = file->Name;
-            char fullPath[MAX_PATH];
+            CPathBuffer fullPath;
             char netFSName[MAX_PATH];
             netFSName[0] = 0;
             if (file->DosName != NULL)
             {
                 lstrcpy(fullPath, GetPath());
-                if (SalPathAppend(fullPath, file->Name, MAX_PATH) &&
+                if (SalPathAppend(fullPath, file->Name, fullPath.Size()) &&
                     SalGetFileAttributes(fullPath) == INVALID_FILE_ATTRIBUTES &&
                     GetLastError() == ERROR_FILE_NOT_FOUND)
                 {
                     lstrcpy(fullPath, GetPath());
-                    if (SalPathAppend(fullPath, file->DosName, MAX_PATH) &&
+                    if (SalPathAppend(fullPath, file->DosName, fullPath.Size()) &&
                         SalGetFileAttributes(fullPath) != INVALID_FILE_ATTRIBUTES)
                     { // when full name is not available (problem converting from multibyte to UNICODE), we'll use DOS name
                         fileName = file->DosName;
@@ -103,7 +104,7 @@ void CFilesWindow::Execute(int index)
             if (StrICmp(file->Ext, "lnk") == 0) // is it not a directory shortcut?
             {
                 strcpy(fullName, GetPath());
-                if (!SalPathAppend(fullName, fileName, MAX_PATH))
+                if (!SalPathAppend(fullName, fileName, fullName.Size()))
                 {
                     SalMessageBox(HWindow, LoadStr(IDS_TOOLONGNAME), LoadStr(IDS_ERRORCHANGINGDIR),
                                   MB_OK | MB_ICONEXCLAMATION);
@@ -226,7 +227,7 @@ void CFilesWindow::Execute(int index)
                 {
                     // construction of full archive name for ChangePathToArchive
                     strcpy(fullName, GetPath());
-                    if (!SalPathAppend(fullName, fileName, MAX_PATH))
+                    if (!SalPathAppend(fullName, fileName, fullName.Size()))
                     {
                         SalMessageBox(HWindow, LoadStr(IDS_TOOLONGNAME), LoadStr(IDS_ERRORCHANGINGDIR),
                                       MB_OK | MB_ICONEXCLAMATION);
@@ -258,8 +259,8 @@ void CFilesWindow::Execute(int index)
             // the ExecuteAssociation below can change the panel path during recursive
             // calls (it contains a message loop), so we store the full file name here
             lstrcpy(fullPath, GetPath());
-            if (!SalPathAppend(fullPath, fileName, MAX_PATH))
-                fullPath[0] = 0;
+            if (!SalPathAppend(fullPath, fileName, fullPath.Size()))
+                fullPath.Get()[0] = 0;
 
             // launch of the default context menu item (association)
             HCURSOR oldCur = SetCursor(LoadCursor(NULL, IDC_WAIT));
@@ -326,7 +327,7 @@ void CFilesWindow::Execute(int index)
 
                 // new path
                 strcpy(fullName, path);
-                if (!SalPathAppend(fullName, dir->Name, MAX_PATH))
+                if (!SalPathAppend(fullName, dir->Name, fullName.Size()))
                 {
                     SalMessageBox(HWindow, LoadStr(IDS_TOOLONGNAME), LoadStr(IDS_ERRORCHANGINGDIR),
                                   MB_OK | MB_ICONEXCLAMATION);
@@ -335,15 +336,15 @@ void CFilesWindow::Execute(int index)
                 }
 
                 // Vista: we handle unlistable junction points: change path to junction point target
-                char junctTgtPath[MAX_PATH];
+                CPathBuffer junctTgtPath;
                 int repPointType;
                 if (GetPathDriveType() == DRIVE_FIXED && (dir->Attr & FILE_ATTRIBUTE_REPARSE_POINT) &&
-                    GetReparsePointDestination(fullName, junctTgtPath, MAX_PATH, &repPointType, TRUE) &&
+                    GetReparsePointDestination(fullName, junctTgtPath, junctTgtPath.Size(), &repPointType, TRUE) &&
                     repPointType == 2 /* JUNCTION POINT */ &&
-                    SalPathAppend(fullName, "*", MAX_PATH + 10))
+                    SalPathAppend(fullName, "*", fullName.Size()))
                 {
                     WIN32_FIND_DATA fileData;
-                    HANDLE search = HANDLES_Q(FindFirstFile(fullName, &fileData));
+                    HANDLE search = SalFindFirstFileH(fullName, &fileData);
                     DWORD err = GetLastError();
                     CutDirectory(fullName);
                     if (search != INVALID_HANDLE_VALUE)
@@ -450,7 +451,7 @@ void CFilesWindow::Execute(int index)
 
                         // we build shortened path to archive and obtain top index accordingly
                         strcpy(doublePath, GetZIPArchive());
-                        SalPathAppend(doublePath, path, 2 * MAX_PATH);
+                        SalPathAppend(doublePath, path, doublePath.Size());
                         int topIndex; // next top index, -1 -> invalid
                         if (!TopIndexMem.FindAndPop(doublePath, topIndex))
                             topIndex = -1;
@@ -466,12 +467,12 @@ void CFilesWindow::Execute(int index)
                 {
                     // backup data for TopIndexMem (doublePath + topIndex)
                     strcpy(doublePath, GetZIPArchive());
-                    SalPathAppend(doublePath, GetZIPPath(), 2 * MAX_PATH);
+                    SalPathAppend(doublePath, GetZIPPath(), doublePath.Size());
                     int topIndex = ListBox->GetTopIndex();
 
                     // new path
                     strcpy(fullName, GetZIPPath());
-                    if (!SalPathAppend(fullName, dir->Name, MAX_PATH))
+                    if (!SalPathAppend(fullName, dir->Name, fullName.Size()))
                     {
                         SalMessageBox(HWindow, LoadStr(IDS_TOOLONGNAME), LoadStr(IDS_ERRORCHANGINGDIR),
                                       MB_OK | MB_ICONEXCLAMATION);
@@ -1647,7 +1648,7 @@ BOOL CFilesWindow::ChangePathToDisk(HWND parent, const char* path, int suggested
 
     //TRACE_I("change-to-disk: begin");
 
-    if (strlen(path) >= MAX_PATH - 2)
+    if (strlen(path) >= SAL_MAX_LONG_PATH - 2)
     {
         SalMessageBox(parent, LoadStr(IDS_TOOLONGNAME), LoadStr(IDS_ERRORCHANGINGDIR),
                       MB_OK | MB_ICONEXCLAMATION);
@@ -1657,12 +1658,11 @@ BOOL CFilesWindow::ChangePathToDisk(HWND parent, const char* path, int suggested
     }
 
     // we make backup copies
-    char backup[MAX_PATH];
-    lstrcpyn(backup, path, MAX_PATH); // must be done before UpdateDefaultDir (it may point to DefaultDir[])
-    char backup2[MAX_PATH];
+    CPathBuffer backup(path); // must be done before UpdateDefaultDir (it may point to DefaultDir[])
+    CPathBuffer backup2;
     if (suggestedFocusName != NULL)
     {
-        lstrcpyn(backup2, suggestedFocusName, MAX_PATH);
+        lstrcpyn(backup2, suggestedFocusName, backup2.Size());
         suggestedFocusName = backup2;
     }
 
@@ -1702,7 +1702,7 @@ BOOL CFilesWindow::ChangePathToDisk(HWND parent, const char* path, int suggested
     BOOL fixedDrive = FALSE;
     BOOL canTryUserRescuePath = FALSE; // allows using Configuration.IfPathIsInaccessibleGoTo right before the fixed-drive path
     BOOL openIfPathIsInaccessibleGoToCfg = FALSE;
-    char ifPathIsInaccessibleGoTo[MAX_PATH];
+    CPathBuffer ifPathIsInaccessibleGoTo;
     GetIfPathIsInaccessibleGoTo(ifPathIsInaccessibleGoTo);
     if ((ifPathIsInaccessibleGoTo[0] == '\\' && ifPathIsInaccessibleGoTo[1] == '\\' ||
          ifPathIsInaccessibleGoTo[0] != 0 && ifPathIsInaccessibleGoTo[1] == ':') &&
@@ -1717,8 +1717,7 @@ BOOL CFilesWindow::ChangePathToDisk(HWND parent, const char* path, int suggested
     BOOL detachFS;
     if (PrepareCloseCurrentPath(parent, canForce, TRUE, detachFS, tryCloseReason))
     { // change within "ptDisk" or we can close the current path, we try to open a new one
-        char changedPath[MAX_PATH];
-        strcpy(changedPath, path);
+        CPathBuffer changedPath(path);
         BOOL tryNet = !CriticalShutdown && ((!Is(ptDisk) && !Is(ptZIPArchive)) || !HasTheSameRootPath(path, GetPath()));
 
     _TRY_AGAIN:
@@ -1946,7 +1945,7 @@ BOOL CFilesWindow::ChangePathToDisk(HWND parent, const char* path, int suggested
                 int msgboxRes = (int)CDriveSelectErrDlg(parent, text, changedPath).Execute();
                 if (msgboxRes == IDCANCEL && CutDirectory(CheckPathRootWithRetryMsgBox))
                 { // to allow entering the root when a volume is mounted (F:\DRIVE_CD -> F:\)
-                    lstrcpyn(changedPath, CheckPathRootWithRetryMsgBox, MAX_PATH);
+                    lstrcpyn(changedPath, CheckPathRootWithRetryMsgBox, changedPath.Size());
                     msgboxRes = IDRETRY;
                 }
                 CheckPathRootWithRetryMsgBox[0] = 0;
@@ -2004,15 +2003,13 @@ BOOL CFilesWindow::ChangePathToArchive(const char* archive, const char* archiveP
                          forceUpdate, refreshListBox, isRefresh, canFocusFileName, isHistory);
 
     // we make backup copies
-    char backup1[MAX_PATH];
-    lstrcpyn(backup1, archive, MAX_PATH);
-    char backup2[MAX_PATH];
-    lstrcpyn(backup2, archivePath, MAX_PATH);
+    CPathBuffer backup1(archive);
+    CPathBuffer backup2(archivePath);
     archivePath = backup2;
-    char backup3[MAX_PATH];
+    CPathBuffer backup3;
     if (suggestedFocusName != NULL)
     {
-        lstrcpyn(backup3, suggestedFocusName, MAX_PATH);
+        lstrcpyn(backup3, suggestedFocusName, backup3.Size());
         suggestedFocusName = backup3;
     }
 

@@ -36,6 +36,9 @@
 #endif
 #include <math.h>
 
+// Long path support (Phase 1)
+#include "common/widepath.h"
+
 // Workaround for runtime check failure in debug builds: the original macro
 // casts the RGB value to WORD, which triggers a data loss warning (of the RED component)
 #undef GetGValue

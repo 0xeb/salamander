@@ -148,6 +148,46 @@ SalWidePath::~SalWidePath()
 }
 
 //
+// CPathBuffer class implementation
+//
+
+CPathBuffer::CPathBuffer()
+    : m_buffer(NULL)
+{
+    m_buffer = (char*)malloc(SAL_MAX_LONG_PATH);
+    if (m_buffer != NULL)
+    {
+        m_buffer[0] = '\0';
+    }
+}
+
+CPathBuffer::CPathBuffer(const char* initialPath)
+    : m_buffer(NULL)
+{
+    m_buffer = (char*)malloc(SAL_MAX_LONG_PATH);
+    if (m_buffer != NULL)
+    {
+        if (initialPath != NULL)
+        {
+            strncpy(m_buffer, initialPath, SAL_MAX_LONG_PATH - 1);
+            m_buffer[SAL_MAX_LONG_PATH - 1] = '\0';
+        }
+        else
+        {
+            m_buffer[0] = '\0';
+        }
+    }
+}
+
+CPathBuffer::~CPathBuffer()
+{
+    if (m_buffer != NULL)
+    {
+        free(m_buffer);
+    }
+}
+
+//
 // Convenience wrappers
 //
 
@@ -297,6 +337,29 @@ HANDLE SalLPFindFirstFileA(const char* fileName, WIN32_FIND_DATAA* findData)
     return h;
 }
 
+BOOL SalLPFindNextFileA(HANDLE hFindFile, WIN32_FIND_DATAA* findData)
+{
+    WIN32_FIND_DATAW findDataW;
+    BOOL result = FindNextFileW(hFindFile, &findDataW);
+    if (result && findData != NULL)
+    {
+        // Convert wide find data to ANSI
+        findData->dwFileAttributes = findDataW.dwFileAttributes;
+        findData->ftCreationTime = findDataW.ftCreationTime;
+        findData->ftLastAccessTime = findDataW.ftLastAccessTime;
+        findData->ftLastWriteTime = findDataW.ftLastWriteTime;
+        findData->nFileSizeHigh = findDataW.nFileSizeHigh;
+        findData->nFileSizeLow = findDataW.nFileSizeLow;
+        findData->dwReserved0 = findDataW.dwReserved0;
+        findData->dwReserved1 = findDataW.dwReserved1;
+        WideCharToMultiByte(CP_ACP, 0, findDataW.cFileName, -1,
+                            findData->cFileName, MAX_PATH, NULL, NULL);
+        WideCharToMultiByte(CP_ACP, 0, findDataW.cAlternateFileName, -1,
+                            findData->cAlternateFileName, 14, NULL, NULL);
+    }
+    return result;
+}
+
 //
 // Handle-tracking variant (debug builds only)
 //
@@ -339,7 +402,7 @@ HANDLE SalLPFindFirstFileTracked(
     // Track the handle using Salamander's handle tracking system
     DWORD err = GetLastError();
     __Handles.SetInfo(srcFile, srcLine, __otQuiet)
-        .CheckCreate(h != INVALID_HANDLE_VALUE, __htFind, __hoFindFirstFile, h, err, TRUE);
+        .CheckCreate(h != INVALID_HANDLE_VALUE, __htFindFile, __hoFindFirstFile, h, err, TRUE);
 
     return h;
 }

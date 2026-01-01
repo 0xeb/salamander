@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include "common/widepath.h"
+
 #define NUM_OF_CHECKTHREADS 30                   // maximum number of threads for "non-blocking" path accessibility tests
 #define ICONOVR_REFRESH_PERIOD 2000              // minimum interval between icon-overlay refreshes in the panel (see IconOverlaysChangedOnPath)
 #define MIN_DELAY_BETWEENINACTIVEREFRESHES 2000  // minimum refresh interval when the main window is inactive
@@ -57,7 +59,7 @@ class CCopyMoveData;
 struct CTmpDropData
 {
     BOOL Copy;
-    char TargetPath[MAX_PATH];
+    char TargetPath[SAL_MAX_LONG_PATH];
     CCopyMoveData* Data;
 };
 
@@ -475,7 +477,7 @@ public:
 class CFilesWindowAncestor : public CWindow // the real object core - everything private ;-)
 {
 private:
-    char Path[MAX_PATH];      // path for a ptDisk panel - normal ("c:\path") or UNC ("\\server\share\path")
+    char Path[SAL_MAX_LONG_PATH];      // path for a ptDisk panel - normal ("c:\path") or UNC ("\\server\share\path")
     BOOL SuppressAutoRefresh; // TRUE if the user canceled directory listing during reading and chose temporary auto-refresh suppression
 
     CPanelType PanelType; // type of panel (disk, archive, plugin FS)
@@ -485,8 +487,8 @@ private:
 
     // when we are inside an archive:
     CSalamanderDirectory* ArchiveDir; // content of the open archive; basic data - array of CFileData
-    char ZIPArchive[MAX_PATH];        // path to the open archive
-    char ZIPPath[MAX_PATH];           // path inside the open archive
+    char ZIPArchive[SAL_MAX_LONG_PATH];        // path to the open archive
+    char ZIPPath[SAL_MAX_LONG_PATH];           // path inside the open archive
     FILETIME ZIPArchiveDate;          // archive date (used for the ".." date and during refresh)
     CQuadWord ZIPArchiveSize;         // archive size - used to detect archive changes
 
@@ -1637,14 +1639,14 @@ struct CPanelTmpEnumData
     // for enum-zip-selection, enumFiles > 0
     CSalamanderDirectory* EnumLastDir;
     int EnumLastIndex;
-    char EnumLastPath[MAX_PATH];
-    char EnumTmpFileName[MAX_PATH];
+    char EnumLastPath[SAL_MAX_LONG_PATH];
+    char EnumTmpFileName[MAX_PATH];  // filename only, not full path
 
     // for disk enumeration, enumFiles > 0
-    char WorkPath[MAX_PATH];                 // path where Files and Dirs reside, used only when browsing disk (not archives)
+    char WorkPath[SAL_MAX_LONG_PATH];        // path where Files and Dirs reside, used only when browsing disk (not archives)
     CSalamanderDirectory* DiskDirectoryTree; // replacement for Panel->ArchiveDir
-    char EnumLastDosPath[MAX_PATH];          // DOS name of EnumLastPath
-    char EnumTmpDosFileName[MAX_PATH];       // DOS name of EnumTmpFileName
+    char EnumLastDosPath[MAX_PATH];          // DOS name of EnumLastPath (8.3 format, always short)
+    char EnumTmpDosFileName[MAX_PATH];       // DOS name of EnumTmpFileName (8.3 format)
     int FilesCountReturnedFromWP;            // number of files already returned by the enumerator directly from WorkPath (i.e. from Files)
 
     CPanelTmpEnumData();

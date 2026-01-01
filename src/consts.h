@@ -1352,7 +1352,7 @@ extern const char *LOW_MEMORY,
 
 extern const char* STR_NONE; // "(none)" - plug-iny: pro DLLName a Version pokud jsou nezjistitelne
 
-extern char DefaultDir['z' - 'a' + 1][MAX_PATH]; // kam jit pri zmene disku
+extern char DefaultDir['z' - 'a' + 1][SAL_MAX_LONG_PATH]; // kam jit pri zmene disku
 
 extern int MyTimeCounter;                   // po kazdem pouziti inkrementovat !
 extern CRITICAL_SECTION TimeCounterSection; // pro synchronizaci pristupu k ^

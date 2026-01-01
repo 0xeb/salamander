@@ -220,7 +220,7 @@ const char* SHELLEXECUTE_CLASSNAME = "SalamanderShellExecute";
 CAssociations Associations; // asociace nactene z registry
 CShares Shares;
 
-char DefaultDir['Z' - 'A' + 1][MAX_PATH];
+char DefaultDir['Z' - 'A' + 1][SAL_MAX_LONG_PATH];
 
 HACCEL AccelTable1 = NULL;
 HACCEL AccelTable2 = NULL;

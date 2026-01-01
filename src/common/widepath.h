@@ -21,8 +21,57 @@
 // Threshold for adding \\?\ prefix (leave some margin below MAX_PATH)
 #define SAL_LONG_PATH_THRESHOLD 240
 
-// Maximum path length with \\?\ prefix
+// Maximum path length with \\?\ prefix (Windows limit)
 #define SAL_MAX_LONG_PATH 32767
+
+//
+// CPathBuffer
+//
+// RAII heap-allocated buffer for path operations. Supports full OS path limit.
+// Use this instead of char[MAX_PATH] for paths that may exceed 260 characters.
+//
+// Usage:
+//   CPathBuffer path;
+//   strcpy(path.Get(), "C:\\some\\path");
+//   SalPathAppend(path.Get(), fileName, path.Size());
+//
+// Or with initial value:
+//   CPathBuffer path(existingPath);
+//   SalPathAppend(path.Get(), fileName, path.Size());
+//
+class CPathBuffer
+{
+public:
+    // Constructs empty buffer (heap-allocated, full OS limit)
+    CPathBuffer();
+
+    // Constructs buffer initialized with a path
+    explicit CPathBuffer(const char* initialPath);
+
+    // Destructor frees allocated memory
+    ~CPathBuffer();
+
+    // Returns pointer to the buffer
+    char* Get() { return m_buffer; }
+    const char* Get() const { return m_buffer; }
+
+    // Returns buffer size (SAL_MAX_LONG_PATH)
+    int Size() const { return SAL_MAX_LONG_PATH; }
+
+    // Implicit conversion for convenience
+    operator char*() { return m_buffer; }
+    operator const char*() const { return m_buffer; }
+
+    // Returns TRUE if allocation succeeded
+    BOOL IsValid() const { return m_buffer != NULL; }
+
+private:
+    char* m_buffer;
+
+    // Disable copy
+    CPathBuffer(const CPathBuffer&);
+    CPathBuffer& operator=(const CPathBuffer&);
+};
 
 //
 // SalWidePath
@@ -126,8 +175,9 @@ HANDLE SalLPFindFirstFile(const char* fileName, WIN32_FIND_DATAW* findData);
 // Converts result back to ANSI WIN32_FIND_DATA for compatibility
 HANDLE SalLPFindFirstFileA(const char* fileName, WIN32_FIND_DATAA* findData);
 
-// FindNextFile (standard API, no wrapper needed since handle is already wide)
-// Use standard FindNextFileW with handle from SalFindFirstFile
+// FindNextFile wrapper for use with handles from SalLPFindFirstFileA
+// Converts result back to ANSI WIN32_FIND_DATA for compatibility
+BOOL SalLPFindNextFileA(HANDLE hFindFile, WIN32_FIND_DATAA* findData);
 
 //
 // Handle-tracking variants for integration with Salamander's HANDLES system
