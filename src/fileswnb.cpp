@@ -1,5 +1,6 @@
 ﻿// SPDX-FileCopyrightText: 2023 Open Salamander Authors
 // SPDX-License-Identifier: GPL-2.0-or-later
+// CommentsTranslationProject: TRANSLATED
 
 #include "precomp.h"
 
@@ -723,8 +724,8 @@ CFilesWindow::WindowProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
                         CIconList* dstIconList;
                         int dstIconListIndex;
                         int i = Associations.AllocIcon(&dstIconList, &dstIconListIndex, iconSize);
-                        if (i != -1) // ziskali jsme misto pro novou ikonku
-                        {            // nakopirujeme si ji z IconCache do Associations
+                        if (i != -1) // we got space for a new icon
+                        {            // copy it from IconCache to Associations
                             Associations[index].SetIndex(i, iconSize);
 
                             BOOL leaveSection;
@@ -745,13 +746,13 @@ CFilesWindow::WindowProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
 
                             if (!StopIconRepaint)
                             {
-                                // panely prekreslime pouze pokud odpovidaji velikosti ikon
+                                // repaint panels only if they match icon size
                                 if (iconSize == GetIconSizeForCurrentViewMode())
-                                    RepaintIconOnly(-1); // u nas vsechny
+                                    RepaintIconOnly(-1); // all of ours
 
                                 CFilesWindow* otherPanel = MainWindow->GetOtherPanel(this);
                                 if (iconSize == otherPanel->GetIconSizeForCurrentViewMode())
-                                    otherPanel->RepaintIconOnly(-1); // a u sousedu vsechny
+                                    otherPanel->RepaintIconOnly(-1); // and all of neighbors'
                             }
                             else
                                 PostAllIconsRepaint = TRUE;
@@ -761,10 +762,10 @@ CFilesWindow::WindowProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
             }
         }
 
-        // provedeme prekresleni postizeneho indexu
-        if (file != NULL) // file se zde pouziva jen pro test na NULL
+        // perform redrawing of affected index
+        if (file != NULL) // file is only used here for NULL test
         {
-            if (!StopIconRepaint) // pokud je povoleno prekreslovani ikon
+            if (!StopIconRepaint) // if icon repainting is enabled
                 RepaintIconOnly((int)wParam);
             else
                 PostAllIconsRepaint = TRUE;
@@ -800,7 +801,7 @@ CFilesWindow::WindowProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
 
     case WM_USER_CHANGEDIR:
     {
-        // postprocessing provedeme jen u cest, ktere jsme ziskali jako text (a ne primo dropnutim adresare)
+        // perform post-processing only for paths we obtained as text (not directly by dropping a directory)
         char buff[2 * MAX_PATH];
         strcpy_s(buff, (char*)lParam);
         if (!(BOOL)wParam || PostProcessPathFromUser(HWindow, buff))
@@ -810,8 +811,8 @@ CFilesWindow::WindowProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
 
     case WM_USER_FOCUSFILE:
     {
-        // Musime okno vytahnout uz tady, protoze behem volani ChangeDir muze dojit
-        // k vyskoceni messageboxu (cesta neexistuje) a ten by zustal pod Findem.
+        // We must bring the window forward here because during ChangeDir call a messagebox
+        // may pop up (path does not exist) and it would be left behind Find.
         SetForegroundWindow(MainWindow->HWindow);
         if (IsIconic(MainWindow->HWindow))
         {
@@ -863,10 +864,10 @@ CFilesWindow::WindowProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
         //      return 0;
         //    }
 
-    case WM_USER_DONEXTFOCUS: // pokud to jiz nestihl RefreshDirectory, udelame to tady
+    case WM_USER_DONEXTFOCUS: // if RefreshDirectory didn't manage it, we do it here
     {
         DontClearNextFocusName = FALSE;
-        if (NextFocusName[0] != 0) // je-li co fokusit
+        if (NextFocusName[0] != 0) // if there is something to focus
         {
             int total = Files->Count + Dirs->Count;
             int found = -1;
@@ -876,14 +877,14 @@ CFilesWindow::WindowProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
                 CFileData* f = (i < Dirs->Count) ? &Dirs->At(i) : &Files->At(i - Dirs->Count);
                 if (StrICmp(f->Name, NextFocusName) == 0)
                 {
-                    if (strcmp(f->Name, NextFocusName) == 0) // soubor nalezen presne
+                    if (strcmp(f->Name, NextFocusName) == 0) // file found exactly
                     {
                         NextFocusName[0] = 0;
                         SetCaretIndex(i, FALSE);
                         break;
                     }
                     if (found == -1)
-                        found = i; // soubor nalezen (ignore-case)
+                        found = i; // file found (ignore-case)
                 }
             }
             if (i == total && found != -1)
@@ -927,7 +928,7 @@ CFilesWindow::WindowProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
                     if (plSizeValid || sizeValid && (!isDir || f->SizeValid))
                         selectedSize += plSizeValid ? plSize : f->Size;
                     else
-                        displaySize = FALSE; // soubor nezname velikosti nebo adresar bez zname/vypocitane velikosti
+                        displaySize = FALSE; // file of unknown size or directory without known/calculated size
                 }
             }
             if (files > 0 || dirs > 0)
@@ -1012,7 +1013,7 @@ CFilesWindow::WindowProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
         DirectoryLine->SetLeftPanel(MainWindow->LeftPanel == this);
         ToggleDirectoryLine();
         //---  nahozeni typu viewu + nacteni obsahu adresare
-        SetThumbnailSize(Configuration.ThumbnailSize); // musi existovat ListBox
+        SetThumbnailSize(Configuration.ThumbnailSize); // ListBox must exist
         if (!ListBox->CreateEx(WS_EX_WINDOWEDGE,
                                CFILESBOX_CLASSNAME,
                                "",
@@ -1045,7 +1046,7 @@ CFilesWindow::WindowProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
         SelectViewTemplate(index, FALSE, FALSE);
         ShowWindow(ListBox->HWindow, SW_SHOW);
 
-        // srovname nastaveni promenne AutomaticRefresh a directory-liny
+        // synchronize AutomaticRefresh variable and directory-line settings
         SetAutomaticRefresh(AutomaticRefresh, TRUE);
 
         return 0;
@@ -1053,18 +1054,18 @@ CFilesWindow::WindowProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
 
     case WM_DESTROY:
     {
-        //---  zruseni tohoto panelu z pole zdroju pro enumeraci souboru ve viewerech
+        //---  remove this panel from the list of sources for file enumeration in viewers
         EnumFileNamesRemoveSourceUID(HWindow);
 
         CancelUI(); // cancel QuickSearch and QuickEdit
         LastRefreshTime = INT_MAX;
         BeginStopRefresh();
         DetachDirectory(this);
-        //---  uvolneni child-oken
+        //---  free child windows
         RevokeDragDrop();
         ListBox->DetachWindow();
         delete ListBox;
-        ListBox = NULL; // pro jistotu, at se chyby ukazou...
+        ListBox = NULL; // for safety, so errors show up
 
         StatusLine->DestroyWindow();
         delete StatusLine;
@@ -1072,16 +1073,16 @@ CFilesWindow::WindowProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
 
         DirectoryLine->DestroyWindow();
         delete DirectoryLine;
-        DirectoryLine = NULL; // oprava padacky
+        DirectoryLine = NULL; // crash fix
                               //---
         return 0;
     }
 
-    case WM_USER_ENUMFILENAMES: // hledani dalsiho/predchoziho jmena pro viewer
+    case WM_USER_ENUMFILENAMES: // finding next/previous name for viewer
     {
         HANDLES(EnterCriticalSection(&FileNamesEnumDataSect));
 
-        if (InactiveRefreshTimerSet) // pokud je zde odlozeny refresh, musime jej provest ihned, jinak budeme enumerovat nad neaktualnim listingem; pokud bude dele trvat nevadi, GetFileNameForViewer si na vysledek pocka...
+        if (InactiveRefreshTimerSet) // if there is a delayed refresh here, we must execute it immediately, otherwise we will enumerate over outdated listing; if it takes longer it's ok, GetFileNameForViewer will wait for the result...
         {
             //        TRACE_I("Refreshing during enumeration (refresh in inactive window was delayed)");
             KillTimer(HWindow, IDT_INACTIVEREFRESH);
@@ -1090,14 +1091,14 @@ CFilesWindow::WindowProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
             SendMessage(HWindow, WM_USER_INACTREFRESH_DIR, FALSE, InactRefreshLParam);
         }
 
-        if ((int)wParam /* reqUID */ == FileNamesEnumData.RequestUID && // nedoslo k zadani dalsiho pozadaku (tento by pak byl k nicemu)
-            EnumFileNamesSourceUID == FileNamesEnumData.SrcUID &&       // nedoslo ke zmene zdroje
-            !FileNamesEnumData.TimedOut)                                // na vysledek jeste nekdo ceka
+        if ((int)wParam /* reqUID */ == FileNamesEnumData.RequestUID && // no other request was made (this would then be useless)
+            EnumFileNamesSourceUID == FileNamesEnumData.SrcUID &&       // source did not change
+            !FileNamesEnumData.TimedOut)                                // someone is still waiting for the result
         {
             if (Files != NULL && Is(ptDisk))
             {
                 BOOL selExists = FALSE;
-                if (FileNamesEnumData.PreferSelected) // je-li to treba, zjistime jestli existuje selectiona
+                if (FileNamesEnumData.PreferSelected) // if necessary, find out if there is a selection
                 {
                     int i;
                     for (i = 0; i < Files->Count; i++)
@@ -1113,19 +1114,19 @@ CFilesWindow::WindowProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
                 int index = FileNamesEnumData.LastFileIndex;
                 int count = Files->Count;
                 BOOL indexNotFound = TRUE;
-                if (index == -1) // hledame od prvniho nebo od posledniho
+                if (index == -1) // search from first or from last
                 {
                     if (FileNamesEnumData.RequestType == fnertFindPrevious)
-                        index = count; // hledame predchozi + mame zacit na poslednim
-                                       // else  // hledame nasledujici + mame zacit na prvnim
+                        index = count; // search previous + start from last
+                                       // else  // search next + start from first
                 }
                 else
                 {
-                    if (FileNamesEnumData.LastFileName[0] != 0) // zname plne jmeno souboru na 'index', zkontrolujeme jestli nedoslo k rozesunuti/sesunuti pole + pripadne dohledame novy index
+                    if (FileNamesEnumData.LastFileName[0] != 0) // we know the full filename at 'index', check if array was scattered/squeezed + if necessary find the new index
                     {
                         int pathLen = (int)strlen(GetPath());
                         if (StrNICmp(GetPath(), FileNamesEnumData.LastFileName, pathLen) == 0)
-                        { // cesta k souboru se musi shodovat s cestou v panelu ("always true")
+                        { // path to file must match path in panel ("always true")
                             const char* name = FileNamesEnumData.LastFileName + pathLen;
                             if (*name == '\\' || *name == '/')
                                 name++;
@@ -1135,11 +1136,11 @@ CFilesWindow::WindowProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
                             if (nameIsSame)
                                 indexNotFound = FALSE;
                             if (f == NULL || !nameIsSame)
-                            { // jmeno na indexu 'index' neni FileNamesEnumData.LastFileName, zkusime najit novy index tohoto jmena
+                            { // name at index 'index' is not FileNamesEnumData.LastFileName, try to find new index of this name
                                 int i;
                                 for (i = 0; i < count && StrICmp(name, Files->At(i).Name) != 0; i++)
                                     ;
-                                if (i != count) // novy index nalezen
+                                if (i != count) // new index found
                                 {
                                     indexNotFound = FALSE;
                                     index = i;
@@ -1162,9 +1163,9 @@ CFilesWindow::WindowProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
 
                 int wantedViewerType = 0;
                 BOOL onlyAssociatedExtensions = FALSE;
-                if (FileNamesEnumData.OnlyAssociatedExtensions) // preje si viewer filtrovani podle asociovanych pripon?
+                if (FileNamesEnumData.OnlyAssociatedExtensions) // does the viewer want filtering by associated extensions?
                 {
-                    if (FileNamesEnumData.Plugin != NULL) // viewer z pluginu
+                    if (FileNamesEnumData.Plugin != NULL) // viewer from plug-in
                     {
                         int pluginIndex = Plugins.GetIndex(FileNamesEnumData.Plugin);
                         if (pluginIndex != -1) // "always true"
@@ -1173,7 +1174,7 @@ CFilesWindow::WindowProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
                             onlyAssociatedExtensions = TRUE;
                         }
                     }
-                    else // interni viewer
+                    else // internal viewer
                     {
                         wantedViewerType = VIEWER_INTERNAL;
                         onlyAssociatedExtensions = TRUE;
@@ -1183,7 +1184,7 @@ CFilesWindow::WindowProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
                 BOOL preferSelected = selExists && FileNamesEnumData.PreferSelected;
                 switch (FileNamesEnumData.RequestType)
                 {
-                case fnertFindNext: // dalsi
+                case fnertFindNext: // next
                 {
                     CDynString strViewerMasks;
                     if (!onlyAssociatedExtensions || MainWindow->GetViewersAssoc(wantedViewerType, &strViewerMasks))
@@ -1212,7 +1213,7 @@ CFilesWindow::WindowProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
                     break;
                 }
 
-                case fnertFindPrevious: // predchozi
+                case fnertFindPrevious: // previous
                 {
                     CDynString strViewerMasks;
                     if (!onlyAssociatedExtensions || MainWindow->GetViewersAssoc(wantedViewerType, &strViewerMasks))
@@ -1241,7 +1242,7 @@ CFilesWindow::WindowProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
                     break;
                 }
 
-                case fnertIsSelected: // zjisteni oznaceni
+                case fnertIsSelected: // check marking
                 {
                     if (!indexNotFound && index >= 0 && index < Files->Count)
                     {
@@ -1251,7 +1252,7 @@ CFilesWindow::WindowProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
                     break;
                 }
 
-                case fnertSetSelection: // nastaveni oznaceni
+                case fnertSetSelection: // set marking
                 {
                     if (!indexNotFound && index >= 0 && index < Files->Count)
                     {
@@ -1451,7 +1452,7 @@ MENU_TEMPLATE_ITEM SortByMenu[] =
 
     // docasne reseni pro 1.6 beta 6: naleju vzdy (bez ohledu na ValidFileData)
     // polozky Name, Ext, Date, Size
-    // poradi musi korespondovat s CSortType enumem
+    // order must correspond with CSortType enum
     int textResID[5] = {IDS_COLUMN_MENU_NAME, IDS_COLUMN_MENU_EXT, IDS_COLUMN_MENU_TIME, IDS_COLUMN_MENU_SIZE, IDS_COLUMN_MENU_ATTR};
     int leftCmdID[5] = {CM_LEFTNAME, CM_LEFTEXT, CM_LEFTTIME, CM_LEFTSIZE, CM_LEFTATTR};
     int rightCmdID[5] = {CM_RIGHTNAME, CM_RIGHTEXT, CM_RIGHTTIME, CM_RIGHTSIZE, CM_RIGHTATTR};

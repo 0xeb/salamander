@@ -1,5 +1,6 @@
 ﻿// SPDX-FileCopyrightText: 2023 Open Salamander Authors
 // SPDX-License-Identifier: GPL-2.0-or-later
+// CommentsTranslationProject: TRANSLATED
 
 #include "precomp.h"
 
@@ -106,7 +107,7 @@ LABEL_SortArrayInt:
         }
     } while (i <= j);
 
-    // nasledujici "hezky" kod jsme nahradili kodem podstatne setricim stack (max. log(N) zanoreni rekurze)
+    // the following "nice" code was replaced with code that significantly saves stack space (max. log(N) recursion nesting)
     //  if (left < j) SortArrayInt(left, j);
     //  if (i < right) SortArrayInt(i, right);
 
@@ -168,7 +169,7 @@ LABEL_SortArrayForFSInt:
         }
     } while (i <= j);
 
-    // nasledujici "hezky" kod jsme nahradili kodem podstatne setricim stack (max. log(N) zanoreni rekurze)
+    // the following "nice" code was replaced with code that significantly saves stack space (max. log(N) recursion nesting)
     //  if (left < j) SortArrayForFSInt(left, j);
     //  if (i < right) SortArrayForFSInt(i, right);
 
@@ -1054,7 +1055,7 @@ LABEL_SortArray:
         }
     } while (i <= j);
 
-    // nasledujici "hezky" kod jsme nahradili kodem podstatne setricim stack (max. log(N) zanoreni rekurze)
+    // the following "nice" code was replaced with code that significantly saves stack space (max. log(N) recursion nesting)
     //  if (left < j) SortArray(left, j);
     //  if (i < right) SortArray(i, right);
 
