@@ -4,8 +4,6 @@
 
 #pragma once
 
-#include <xmmintrin.h>
-
 // precaution against runtime check failure in the debug version: the original macro casted RGB to WORD,
 // so it reported data loss (RED component)
 #undef GetGValue

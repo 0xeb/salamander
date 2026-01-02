@@ -6,6 +6,27 @@
 
 #include <tlhelp32.h>
 
+// Cross-architecture register access macros for CONTEXT structure
+#ifdef _WIN64
+#ifdef _M_ARM64
+// ARM64 registers
+#define CONTEXT_IP(ctx) ((ctx).Pc)
+#define CONTEXT_SP(ctx) ((ctx).Sp)
+#define CONTEXT_FP(ctx) ((ctx).Fp)
+#define CONTEXT_IP_NAME "PC"
+#define CONTEXT_SP_NAME "SP"
+#define CONTEXT_FP_NAME "FP"
+#else
+// x64 registers
+#define CONTEXT_IP(ctx) ((ctx).Rip)
+#define CONTEXT_SP(ctx) ((ctx).Rsp)
+#define CONTEXT_FP(ctx) ((ctx).Rbp)
+#define CONTEXT_IP_NAME "RIP"
+#define CONTEXT_SP_NAME "RSP"
+#define CONTEXT_FP_NAME "RBP"
+#endif
+#endif
+
 #include "mainwnd.h"
 #include "drivelst.h"
 #include "plugins.h"
@@ -35,6 +56,11 @@ TDirectArray<DWORD> GlobalModulesListTimeStore(50, 20); // x64_OK
 
 BOOL GetProcessorSpeed(DWORD* mhz)
 {
+#ifdef _M_ARM64
+    // ARM64: __rdtsc is not available, processor speed detection not implemented
+    *mhz = 0;
+    return FALSE;
+#else
     __try
     {
         LARGE_INTEGER t1, t2, t3, t4, f;
@@ -83,6 +109,7 @@ BOOL GetProcessorSpeed(DWORD* mhz)
     {
         return FALSE;
     }
+#endif // !_M_ARM64
 }
 
 HANDLE WINAPI GetThreadHandleFromID(DWORD dwThreadID, BOOL bInherit)
@@ -739,6 +766,32 @@ void CCallStack::PrintBugReport(EXCEPTION_POINTERS* Exception, DWORD ThreadID, D
             PrintLine(param, "Registers:", FALSE);
             PCONTEXT ctxtRec = Exception->ContextRecord;
             DWORD idx = 32 + 64;
+#ifdef _M_ARM64
+            if (ctxtRec->ContextFlags & CONTEXT_INTEGER)
+            {
+                sprintf(buf, "X0  = 0x%p  X1  = 0x%p", (void*)ctxtRec->X0, (void*)ctxtRec->X1);
+                PrintLine(param, buf, TRUE);
+                sprintf(buf, "X2  = 0x%p  X3  = 0x%p", (void*)ctxtRec->X2, (void*)ctxtRec->X3);
+                PrintLine(param, buf, TRUE);
+                pointersForDump[idx++] = ctxtRec->X0;
+                pointersForDump[idx++] = ctxtRec->X1;
+                pointersForDump[idx++] = ctxtRec->X2;
+                pointersForDump[idx++] = ctxtRec->X3;
+                pointersForDump[idx++] = ctxtRec->Fp;
+                pointersForDump[idx++] = ctxtRec->Lr;
+                pointersForDump[idx++] = ctxtRec->Pc;
+            }
+            if (ctxtRec->ContextFlags & CONTEXT_CONTROL)
+            {
+                int jj;
+                for (jj = 8; jj > 0; jj--)
+                    pointersForDump[idx++] = ctxtRec->Sp - jj * 4;
+                sprintf(buf, "PC  = 0x%p  SP  = 0x%p", (void*)ctxtRec->Pc, (void*)ctxtRec->Sp);
+                PrintLine(param, buf, TRUE);
+                sprintf(buf, "FP  = 0x%p  LR  = 0x%p", (void*)ctxtRec->Fp, (void*)ctxtRec->Lr);
+                PrintLine(param, buf, TRUE);
+            }
+#else // x64
             if (ctxtRec->ContextFlags & CONTEXT_INTEGER)
             {
                 sprintf(buf, "RAX = 0x%p  RBX = 0x%p", (void*)ctxtRec->Rax, (void*)ctxtRec->Rbx);
@@ -766,11 +819,12 @@ void CCallStack::PrintBugReport(EXCEPTION_POINTERS* Exception, DWORD ThreadID, D
                 sprintf(buf, "RBP = 0x%p  RFL = 0x%X", (void*)ctxtRec->Rbp, ctxtRec->EFlags);
                 PrintLine(param, buf, TRUE);
             }
+#endif // _M_ARM64
             PrintLine(param, "", FALSE);
 #ifndef _DEBUG // to prevent stopping the debugger in debug builds
             if (ctxtRec->ContextFlags & CONTEXT_CONTROL)
             {
-                DWORD64* rsp = (DWORD64*)ctxtRec->Rsp;
+                DWORD64* rsp = (DWORD64*)CONTEXT_SP(*ctxtRec);
                 int i = 0;
                 int validStackCount = 0;
                 while (i < 32 + 64)
@@ -2109,7 +2163,11 @@ void CCallStack::PrintBugReport(EXCEPTION_POINTERS* Exception, DWORD ThreadID, D
                             if (threadWithException)
                                 memcpy(&ctx, Exception->ContextRecord, sizeof(ctx));
                             else
-                                ctx.ContextFlags = CONTEXT_SEGMENTS | CONTEXT_INTEGER | CONTEXT_CONTROL;
+    #ifdef _M_ARM64
+                            ctx.ContextFlags = CONTEXT_INTEGER | CONTEXT_CONTROL;
+#else
+                            ctx.ContextFlags = CONTEXT_SEGMENTS | CONTEXT_INTEGER | CONTEXT_CONTROL;
+#endif
                             if (threadWithException || GetThreadContext(hThread, &ctx))
                             {
 #ifdef _WIN64
@@ -2117,7 +2175,7 @@ void CCallStack::PrintBugReport(EXCEPTION_POINTERS* Exception, DWORD ThreadID, D
                                 // Unwind until IP is 0, sp is at the stack top, and callee IP is in kernel32.
                                 while (TRUE)
                                 {
-                                    DWORD64 controlPc = ctx.Rip;
+                                    DWORD64 controlPc = CONTEXT_IP(ctx);
 
                                     CModuleInfo* modInfo = ModulesInfo.Find((void*)controlPc);
                                     const char* name;
@@ -2132,7 +2190,7 @@ void CCallStack::PrintBugReport(EXCEPTION_POINTERS* Exception, DWORD ThreadID, D
 
                                     if (firstPc)
                                     {
-                                        sprintf(buf, "RIP = 0x%p %s", (void*)controlPc, name);
+                                        sprintf(buf, CONTEXT_IP_NAME " = 0x%p %s", (void*)controlPc, name);
                                         firstPc = FALSE;
                                     }
                                     else
@@ -2159,7 +2217,7 @@ void CCallStack::PrintBugReport(EXCEPTION_POINTERS* Exception, DWORD ThreadID, D
                                             &EstablisherFrame,
                                             NULL);
 
-                                        DWORD64 mewControlPc = ctx.Rip;
+                                        DWORD64 mewControlPc = CONTEXT_IP(ctx);
                                         if (mewControlPc == 0)
                                             break;
                                     }
@@ -2168,8 +2226,8 @@ void CCallStack::PrintBugReport(EXCEPTION_POINTERS* Exception, DWORD ThreadID, D
                                         // Nested functions that do not use any stack space or nonvolatile
                                         // registers are not required to have unwind info (ex.
                                         // USER32!ZwUserCreateWindowEx).
-                                        ctx.Rip = *(DWORD64*)(ctx.Rsp);
-                                        ctx.Rsp += sizeof(DWORD64);
+                                        CONTEXT_IP(ctx) = *(DWORD64*)(CONTEXT_SP(ctx));
+                                        CONTEXT_SP(ctx) += sizeof(DWORD64);
                                     }
                                 }
 #else
@@ -2262,7 +2320,7 @@ void CCallStack::PrintBugReport(EXCEPTION_POINTERS* Exception, DWORD ThreadID, D
                         // Unwind until IP is 0, sp is at the stack top, and callee IP is in kernel32.
                         while (TRUE)
                         {
-                            DWORD64 controlPc = ctx.Rip;
+                            DWORD64 controlPc = CONTEXT_IP(ctx);
 
                             CModuleInfo* modInfo = ModulesInfo.Find((void*)controlPc);
                             const char* name;
@@ -2277,7 +2335,7 @@ void CCallStack::PrintBugReport(EXCEPTION_POINTERS* Exception, DWORD ThreadID, D
 
                             if (firstPc)
                             {
-                                sprintf(buf, "RIP = 0x%p %s", (void*)controlPc, name);
+                                sprintf(buf, CONTEXT_IP_NAME " = 0x%p %s", (void*)controlPc, name);
                                 firstPc = FALSE;
                             }
                             else
@@ -2304,7 +2362,7 @@ void CCallStack::PrintBugReport(EXCEPTION_POINTERS* Exception, DWORD ThreadID, D
                                     &EstablisherFrame,
                                     NULL);
 
-                                DWORD64 mewControlPc = ctx.Rip;
+                                DWORD64 mewControlPc = CONTEXT_IP(ctx);
                                 if (mewControlPc == 0)
                                     break;
                             }
@@ -2313,8 +2371,8 @@ void CCallStack::PrintBugReport(EXCEPTION_POINTERS* Exception, DWORD ThreadID, D
                                 // Nested functions that do not use any stack space or nonvolatile
                                 // registers are not required to have unwind info (ex.
                                 // USER32!ZwUserCreateWindowEx).
-                                ctx.Rip = *(DWORD64*)(ctx.Rsp);
-                                ctx.Rsp += sizeof(DWORD64);
+                                CONTEXT_IP(ctx) = *(DWORD64*)(CONTEXT_SP(ctx));
+                                CONTEXT_SP(ctx) += sizeof(DWORD64);
                             }
                         }
 #else

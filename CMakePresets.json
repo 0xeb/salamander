@@ -53,11 +53,20 @@
         },
         {
             "name": "msvc",
-            "displayName": "Native MSVC (Windows only)",
-            "description": "Native Windows build with Visual Studio",
+            "displayName": "Native MSVC x64 (Windows only)",
+            "description": "Native Windows x64 build with Visual Studio",
             "inherits": "base",
             "generator": "Visual Studio 17 2022",
             "architecture": "x64",
+            "binaryDir": "${sourceDir}/build"
+        },
+        {
+            "name": "msvc-arm64",
+            "displayName": "Native MSVC ARM64 (Windows on ARM)",
+            "description": "Native Windows ARM64 build with Visual Studio",
+            "inherits": "base",
+            "generator": "Visual Studio 17 2022",
+            "architecture": "ARM64",
             "binaryDir": "${sourceDir}/build"
         }
     ],
@@ -86,6 +95,16 @@
         {
             "name": "msvc-debug",
             "configurePreset": "msvc",
+            "configuration": "Debug"
+        },
+        {
+            "name": "msvc-arm64",
+            "configurePreset": "msvc-arm64",
+            "configuration": "Release"
+        },
+        {
+            "name": "msvc-arm64-debug",
+            "configurePreset": "msvc-arm64",
             "configuration": "Debug"
         }
     ]

@@ -45,7 +45,11 @@
 #endif
 
 #ifdef _WIN64
+#ifdef _M_ARM64
+#define SAL_VER_PLATFORM "ARM64"
+#else
 #define SAL_VER_PLATFORM "x64"
+#endif
 #else // _WIN64
 #define SAL_VER_PLATFORM "x86"
 #endif // _WIN64

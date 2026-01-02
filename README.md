@@ -35,7 +35,7 @@ Use ```\src\vcxproj\!populate_build_dir.cmd``` to populate build directory with 
 ### Building with CMake
 
 ```bash
-# Configure
+# Configure (x64)
 cmake -S . -B build
 
 # Build (Debug, Release, or RelWithDebInfo)
@@ -46,6 +46,21 @@ cmake --build build --config RelWithDebInfo --target populate
 ```
 
 Output is placed in ```build\out\salamander\<Config>_x64\```.
+
+### Building on Windows on ARM (ARM64)
+
+```bash
+# Configure using preset
+cmake --preset msvc-arm64
+
+# Build
+cmake --build build --config Release
+
+# Populate output directory
+cmake --build build --config Release --target populate
+```
+
+Output is placed in ```build\out\salamander\<Config>_ARM64\```.
 
 ### Contributing
 

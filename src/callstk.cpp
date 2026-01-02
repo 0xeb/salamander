@@ -69,12 +69,19 @@ MyDummySetUnhandledExceptionFilter(
 {
     return NULL;
 }
+#elif defined _M_ARM64
+// ARM64: patching SetUnhandledExceptionFilter is not implemented
+// The function will return FALSE, so no patching occurs
 #else
-#error "This code works only for x86 and x64!"
+#error "This code works only for x86, x64, and ARM64!"
 #endif
 
 BOOL PreventSetUnhandledExceptionFilterAux()
 {
+#ifdef _M_ARM64
+    // ARM64: patching not implemented, just return FALSE
+    return FALSE;
+#else
     HMODULE hKernel32 = LoadLibrary(_T("kernel32.dll"));
     if (hKernel32 == NULL)
         return FALSE;
@@ -125,6 +132,7 @@ BOOL PreventSetUnhandledExceptionFilterAux()
         //FlushInstructionCache(GetCurrentProcess(), pOrgEntry, 20);
     }
     return bRet;
+#endif // !_M_ARM64
 }
 
 BOOL PreventSetUnhandledExceptionFilter()
