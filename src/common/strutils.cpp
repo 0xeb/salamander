@@ -315,8 +315,8 @@ find the "a?" = {U+0061, U+0301} representation, if it sorts before "a" = {U+006
 words: The function assumes that CompareString(lcid, flags, string, m, string, n never returns CSTR_GREATER_THAN if
 m <= n and the strings agree in the first m TCHARs.
 
-Mozna by se hodilo pouzit "StringInfo Class", ktery umi rozebrat retezec
-na zobrazitelne znaky (sekvence WCHARu odpovidajici jednomu zobrazenemu znaku).
+It might be useful to use "StringInfo Class", which can break down a string
+into displayable characters (WCHAR sequences corresponding to a single displayed character).
 
 * /
 

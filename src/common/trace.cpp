@@ -593,14 +593,14 @@ BOOL C__Trace::Connect(BOOL onUserRequest)
 
                                                     // obtain server process handle
                                                     HANDLE hServerProcess = OpenProcess(PROCESS_DUP_HANDLE, FALSE,
-                                                                                        *(DWORD*)&mapAddress[4] /* ClientOrServerProcessId (tady jde o PID serveru) */);
+                                                                                        *(DWORD*)&mapAddress[4] /* ClientOrServerProcessId (here it is server PID) */);
                                                     // obtain pipe and semaphore handles
                                                     if (hServerProcess != NULL &&
-                                                        DuplicateHandle(hServerProcess, (HANDLE)(DWORD_PTR)(*(DWORD*)&mapAddress[8]) /* HReadOrWritePipe (tady jde o HWritePipe) */, // server
-                                                                        GetCurrentProcess(), &hWritePipeFromSrv,                                                                     // klient
+                                                        DuplicateHandle(hServerProcess, (HANDLE)(DWORD_PTR)(*(DWORD*)&mapAddress[8]) /* HReadOrWritePipe (here it is HWritePipe) */, // server
+                                                                        GetCurrentProcess(), &hWritePipeFromSrv,                                                                     // client
                                                                         GENERIC_WRITE, FALSE, 0) &&
                                                         DuplicateHandle(hServerProcess, (HANDLE)(DWORD_PTR)(*(DWORD*)&mapAddress[12]) /* HPipeSemaphore */, // server
-                                                                        GetCurrentProcess(), &hPipeSemaphoreFromSrv,                                        // klient
+                                                                        GetCurrentProcess(), &hPipeSemaphoreFromSrv,                                        // client
                                                                         0, FALSE, DUPLICATE_SAME_ACCESS))
                                                     {
                                                         *((int*)mapAddress) = 3;                         // write result -> 3 = succeeded, we have handles
@@ -619,7 +619,7 @@ BOOL C__Trace::Connect(BOOL onUserRequest)
                                                     // on failure: tell server it failed, return failure again
                                                     waitRet = WaitForSingleObject(hAcceptedEvent, __COMMUNICATION_WAIT_TIMEOUT);
                                                     if (waitRet == WAIT_OBJECT_0 && // check the result from server
-                                                        *((int*)mapAddress) == 2 /* 2 = uspesne nastartovany cteci thread v serveru */)
+                                                        *((int*)mapAddress) == 2 /* 2 = reading thread successfully started in server */)
                                                     {
                                                         CloseHandle(HPipeSemaphore);
                                                         HPipeSemaphore = hPipeSemaphoreFromSrv; // use semaphore from server (close client one)
@@ -812,7 +812,7 @@ BOOL C__Trace::SendIgnoreAutoClear(BOOL ignore)
 {
     char data[__SIZEOF_PIPEDATAHEADER];
     *(int*)&data[0] = __mtIgnoreAutoClear; // Type
-    *(DWORD*)&data[4] = ignore ? 1 : 0;    // ThreadID: 0 = neignorovat, 1 = ignorovat auto-clear na Trace Serveru
+    *(DWORD*)&data[4] = ignore ? 1 : 0;    // ThreadID: 0 = do not ignore, 1 = ignore auto-clear on Trace Server
     return WritePipe(data, __SIZEOF_PIPEDATAHEADER);
 }
 
@@ -986,12 +986,12 @@ C__Trace::SendMessageToServer(C__MessageType type, BOOL crash)
     {
         DWORD wr;
         WCHAR bufW[5000];
-        swprintf_s(bufW, unicode ? L"%s\t%d\t" // jmeno souboru ve FileW (unicode)
+        swprintf_s(bufW, unicode ? L"%s\t%d\t" // file name in FileW (unicode)
 #ifdef MULTITHREADED_TRACE_ENABLE
                                    L"%d\t"
 #endif // MULTITHREADED_TRACE_ENABLE
                                    L"%d.%d.%d\t%d:%02d:%02d.%03d\t%.3lf\t%s\t%d\t"
-                                 : L"%s\t%d\t" // jmeno souboru ve File (ANSI)
+                                 : L"%s\t%d\t" // file name in File (ANSI)
 #ifdef MULTITHREADED_TRACE_ENABLE
                                    L"%d\t"
 #endif // MULTITHREADED_TRACE_ENABLE

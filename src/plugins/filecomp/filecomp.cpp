@@ -657,7 +657,7 @@ CFilecompThread::Body()
         wnd = dlg->Create();
         if (!wnd)
         {
-            TRACE_E("Nepodarilo se vytvorit CompareFilesDialog");
+            TRACE_E("Failed to create CompareFilesDialog");
             goto LBODYFINAL;
         }
         SetForegroundWindow(wnd);
@@ -727,7 +727,7 @@ CFilecompThread::Body()
                             win);
         if (!wnd)
         {
-            TRACE_E("Nepodarilo se vytvorit MainWindow, GetLastError() = " << GetLastError());
+            TRACE_E("Failed to create MainWindow, GetLastError() = " << GetLastError());
             break;
         }
         dialogBox = FALSE;

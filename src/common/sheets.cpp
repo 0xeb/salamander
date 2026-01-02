@@ -697,7 +697,7 @@ CTreePropHolderDlg::DialogProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
         {
             RECT rect = {0, 0, 4, 8};
             MapDialogRect(HWindow, &rect); // get baseUnitX and baseUnitY to convert dlg-units to pixels
-            treeIndent = MulDiv(9 /* odsazeni v dlg-units */, rect.right /* baseUnitX */, 4);
+            treeIndent = MulDiv(9 /* indent in dlg-units */, rect.right /* baseUnitX */, 4);
             TreeView_SetIndent(HTreeView, treeIndent);
         }
 
@@ -792,7 +792,7 @@ CTreePropHolderDlg::DialogProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
             if (!ChildDialog->ValidateData())
                 return TRUE;
 
-            // obehnu vsechny stranky pro transfer
+            // iterate through all pages for transfer
             for (int i = 0; i < TPD->Count; i++)
                 if (TPD->At(i)->HWindow != NULL)
                     if (!TPD->At(i)->TransferData(ttDataFromWindow))

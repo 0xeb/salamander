@@ -69,7 +69,7 @@ CFilesWindow::WindowProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
     HCURSOR oldCur;
     switch (uMsg)
     {
-        //---  roztahovani listboxu po celem okne
+        //---  stretching the listbox across the entire window
     case WM_SIZE:
     {
         if (ListBox != NULL && ListBox->HWindow != NULL && StatusLine != NULL && DirectoryLine != NULL)
@@ -224,13 +224,13 @@ CFilesWindow::WindowProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
         {
             int count = GetSelCount();
             if (count > 0 || GetCaretIndex() != 0 ||
-                Dirs->Count == 0 || strcmp(Dirs->At(0).Name, "..") != 0) // test jestli se nepracuje jen s ".."
+                Dirs->Count == 0 || strcmp(Dirs->At(0).Name, "..") != 0) // check if we are not working only with ".."
             {
-                BeginSuspendMode(); // cmuchal si da pohov
-                BeginStopRefresh(); // jen aby se nedistribuovaly zpravy o zmenach na cestach
+                BeginSuspendMode(); // the snooper takes a break
+                BeginStopRefresh(); // just to prevent path change notifications from being distributed
 
                 UserWorkedOnThisPath = TRUE;
-                StoreSelection(); // ulozime selection pro prikaz Restore Selection
+                StoreSelection(); // store selection for the Restore Selection command
 
                 ProgressDialogActivateDrop = LastWndFromGetData;
 
@@ -254,16 +254,16 @@ CFilesWindow::WindowProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
                 BOOL cancelOrHandlePath = FALSE;
                 char targetPath[2 * MAX_PATH];
                 lstrcpyn(targetPath, tgtPath, 2 * MAX_PATH - 1);
-                if (tgtPath[0] == '\\' && tgtPath[1] == '\\' || // UNC cesta
-                    tgtPath[0] != 0 && tgtPath[1] == ':')       // klasicka diskova cesta (C:\path)
+                if (tgtPath[0] == '\\' && tgtPath[1] == '\\' || // UNC path
+                    tgtPath[0] != 0 && tgtPath[1] == ':')       // classic disk path (C:\path)
                 {
                     int l = (int)strlen(targetPath);
                     if (l > 3 && targetPath[l - 1] == '\\')
                         targetPath[l - 1] = 0; // krom "c:\" zrusime koncovy backslash
                 }
-                targetPath[strlen(targetPath) + 1] = 0; // zajistime dve nuly na konci retezce
+                targetPath[strlen(targetPath) + 1] = 0; // ensure two zeros at the end of the string
 
-                // snizime prioritu threadu na "normal" (aby operace prilis nezatezovaly stroj)
+                // lower the thread priority to "normal" (so operations do not overload the machine too much)
                 SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_NORMAL);
 
                 BOOL ret = GetPluginFS()->CopyOrMoveFromFS(copy, 5, GetPluginFS()->GetPluginFSName(),
@@ -273,7 +273,7 @@ CFilesWindow::WindowProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
                                                            cancelOrHandlePath,
                                                            ProgressDialogActivateDrop);
 
-                // opet zvysime prioritu threadu, operace dobehla
+                // raise the thread priority again, the operation has finished
                 SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_ABOVE_NORMAL);
 
                 if (ret && !cancelOrHandlePath)
@@ -292,8 +292,8 @@ CFilesWindow::WindowProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
                 }
 
                 ProgressDialogActivateDrop = NULL;              // for further use of progress dialog we must clear the global variable
-                if (tgtPath[0] == '\\' && tgtPath[1] == '\\' || // UNC cesta
-                    tgtPath[0] != 0 && tgtPath[1] == ':')       // klasicka diskova cesta (C:\path)
+                if (tgtPath[0] == '\\' && tgtPath[1] == '\\' || // UNC path
+                    tgtPath[0] != 0 && tgtPath[1] == ':')       // classic disk path (C:\path)
                 {
                     SHChangeNotify(SHCNE_UPDATEDIR, SHCNF_PATH, tgtPath, NULL);
                 }
@@ -436,18 +436,18 @@ CFilesWindow::WindowProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
     case WM_USER_SM_END_NOTIFY_DELAYED:
     {
         if (SnooperSuspended || StopRefresh)
-            return 0;                        // pockame na dalsi WM_USER_SM_END_NOTIFY_DELAYED
+            return 0;                        // wait for the next WM_USER_SM_END_NOTIFY_DELAYED
         if (PluginFSNeedRefreshAfterEndOfSM) // should the plug-in FS be refreshed?
         {
             PluginFSNeedRefreshAfterEndOfSM = FALSE;
-            PostMessage(HWindow, WM_USER_REFRESH_PLUGINFS, 0, 0); // zkusime ho provest ted
+            PostMessage(HWindow, WM_USER_REFRESH_PLUGINFS, 0, 0); // try to execute it now
         }
 
         if (NeedRefreshAfterEndOfSM) // should a refresh happen?
         {
             NeedRefreshAfterEndOfSM = FALSE;
             lParam = RefreshAfterEndOfSMTime;
-            wParam = FALSE; // nebudeme nahazovat RefreshFinishedEvent
+            wParam = FALSE; // we will not set RefreshFinishedEvent
         }
         else
             return 0;
@@ -509,7 +509,7 @@ CFilesWindow::WindowProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
             }
             else
             {
-                if (NeedIconOvrRefreshAfterIconsReading) // refreshneme icon-overlays
+                if (NeedIconOvrRefreshAfterIconsReading) // refresh icon-overlays
                 {
                     NeedIconOvrRefreshAfterIconsReading = FALSE;
 
@@ -620,7 +620,7 @@ CFilesWindow::WindowProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
                         if (uMsg == WM_USER_REFRESH_DIR || uMsg == WM_USER_REFRESH_DIR_EX_DELAYED ||
                             uMsg == WM_USER_ICONREADING_END || uMsg == WM_USER_INACTREFRESH_DIR)
                         {
-                            setWait = (GetCursor() != LoadCursor(NULL, IDC_WAIT)); // ceka uz ?
+                            setWait = (GetCursor() != LoadCursor(NULL, IDC_WAIT)); // is it waiting already?
                             if (setWait)
                                 oldCur = SetCursor(LoadCursor(NULL, IDC_WAIT));
                         }
@@ -673,7 +673,7 @@ CFilesWindow::WindowProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
     {
         if (SnooperSuspended || StopRefresh)
         { // suspend mode is already enabled (working with internal data -> cannot refresh it)
-            // navic muzeme byt i uvnitr plug-inu -> vicenasobne volani metod plug-inu nepodporujeme
+            // additionally we may be inside the plug-in -> multiple calls to plug-in methods are not supported
             PluginFSNeedRefreshAfterEndOfSM = TRUE;
         }
         else
@@ -823,7 +823,7 @@ CFilesWindow::WindowProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
         {
             strcpy(NextFocusName, (char*)wParam);
             SendMessage(HWindow, WM_USER_DONEXTFOCUS, 0, 0);
-            //        SetForegroundWindow(MainWindow->HWindow);  // tady uz je pozde - presunuto nahoru
+            //        SetForegroundWindow(MainWindow->HWindow);  // it's already too late here - moved above
             UpdateWindow(MainWindow->HWindow);
         }
         return 0;
@@ -846,14 +846,14 @@ CFilesWindow::WindowProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
     case WM_USER_VIEWFILEWITH:
     {
         COpenViewerData* data = (COpenViewerData*)wParam;
-        ViewFile(data->FileName, FALSE, (DWORD)lParam, data->EnumFileNamesSourceUID, // FIXME_X64 - overit pretypovani na (DWORD)
+        ViewFile(data->FileName, FALSE, (DWORD)lParam, data->EnumFileNamesSourceUID, // FIXME_X64 - verify casting to (DWORD)
                  data->EnumFileNamesLastFileIndex);
         return 0;
     }
 
     case WM_USER_EDITFILEWITH:
     {
-        EditFile((char*)wParam, (DWORD)lParam); // FIXME_X64 - overit pretypovani na (DWORD)
+        EditFile((char*)wParam, (DWORD)lParam); // FIXME_X64 - verify casting to (DWORD)
         return 0;
     }
 
@@ -951,7 +951,7 @@ CFilesWindow::WindowProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
                                 StatusLine->SetSubTexts(varPlacements, varPlacementsCount);
                         }
                         else
-                            varPlacementsCount = 100; // mohlo se poskodit
+                            varPlacementsCount = 100; // may have been corrupted
                     }
                 }
                 if (!done)
@@ -966,7 +966,7 @@ CFilesWindow::WindowProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
                         ExpandPluralFilesDirs(text, 200, files, dirs, epfdmSelected, FALSE);
                     if (StatusLine->SetText(text) && displaySize)
                         StatusLine->SetSubTexts(varPlacements, varPlacementsCount);
-                    varPlacementsCount = 100; // mohlo se poskodit
+                    varPlacementsCount = 100; // may have been corrupted
                 }
             }
             else
@@ -977,25 +977,25 @@ CFilesWindow::WindowProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
         {
             LastFocus = INT_MAX;
             int index = GetCaretIndex();
-            ItemFocused(index); // pri odznaceni
+            ItemFocused(index); // when deselecting
         }
-        IdleRefreshStates = TRUE; // pri pristim Idle vynutime kontrolu stavovych promennych
+        IdleRefreshStates = TRUE; // on the next Idle we force state variables check
         return 0;
     }
 
     case WM_CREATE:
     {
-        //---  pridani tohoto panelu do pole zdroju pro enumeraci souboru ve viewerech
+        //---  add this panel to the array of sources for file enumeration in viewers
         EnumFileNamesAddSourceUID(HWindow, &EnumFileNamesSourceUID);
 
-        //---  vytvoreni listboxu se soubory a adresari
+        //---  create the listbox with files and directories
         ListBox = new CFilesBox(this);
         if (ListBox == NULL)
         {
             TRACE_E(LOW_MEMORY);
             return -1;
         }
-        //---  vytvoreni statusliny s informacemi o akt. souboru
+        //---  create the status line with information about the current file
         StatusLine = new CStatusWindow(this, blBottom, ooStatic);
         if (StatusLine == NULL)
         {
@@ -1003,7 +1003,7 @@ CFilesWindow::WindowProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
             return -1;
         }
         ToggleStatusLine();
-        //---  vytvoreni statusliny s informacemi o akt. adresari
+        //---  create the status line with information about the current directory
         DirectoryLine = new CStatusWindow(this, blTop, ooStatic);
         if (DirectoryLine == NULL)
         {
@@ -1012,7 +1012,7 @@ CFilesWindow::WindowProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
         }
         DirectoryLine->SetLeftPanel(MainWindow->LeftPanel == this);
         ToggleDirectoryLine();
-        //---  nahozeni typu viewu + nacteni obsahu adresare
+        //---  set the view type + read directory contents
         SetThumbnailSize(Configuration.ThumbnailSize); // ListBox must exist
         if (!ListBox->CreateEx(WS_EX_WINDOWEDGE,
                                CFILESBOX_CLASSNAME,
@@ -1325,7 +1325,7 @@ void CFilesWindow::OpenDirHistory()
     if (!MainWindow->DirHistory->HasPaths())
         return;
 
-    BeginStopRefresh(); // cmuchal si da pohov
+    BeginStopRefresh(); // the snooper takes a break
 
     CMenuPopup menu;
 
@@ -1348,14 +1348,14 @@ void CFilesWindow::OpenDirHistory()
     if (cmd != 0)
         MainWindow->DirHistory->Execute(cmd, FALSE, this, TRUE, FALSE);
 
-    EndStopRefresh(); // ted uz zase cmuchal nastartuje
+    EndStopRefresh(); // now the snooper starts again
 }
 
 void CFilesWindow::OpenStopFilterMenu()
 {
     CALL_STACK_MESSAGE1("CFilesWindow::OpenStopFilterMenu()");
 
-    BeginStopRefresh(); // cmuchal si da pohov
+    BeginStopRefresh(); // the snooper takes a break
 
     CMenuPopup menu;
 
@@ -1372,8 +1372,8 @@ void CFilesWindow::OpenStopFilterMenu()
         }
     }
 
-    /* slouzi pro skript export_mnu.py, ktery generuje salmenu.mnu pro Translator
-   udrzovat synchronizovane s volanim InsertItem() dole...
+    /* used by the export_mnu.py script that generates salmenu.mnu for Translator
+   keep synchronized with InsertItem() calls below...
 MENU_TEMPLATE_ITEM StopFilterMenu[] = 
 {
   {MNTT_PB, 0
@@ -1424,19 +1424,19 @@ MENU_TEMPLATE_ITEM StopFilterMenu[] =
     }
     }
 
-    EndStopRefresh(); // ted uz zase cmuchal nastartuje
+    EndStopRefresh(); // now the snooper starts again
 }
 
-// na zaklade dostupnych sloupcu naplni popup
+// fill the popup based on available columns
 BOOL CFilesWindow::FillSortByMenu(CMenuPopup* popup)
 {
     CALL_STACK_MESSAGE1("CFilesWindow::FillSortByMenu()");
 
-    // sestrelime existujici polozky
+    // remove existing items
     popup->RemoveAllItems();
 
-    /* slouzi pro skript export_mnu.py, ktery generuje salmenu.mnu pro Translator
-   udrzovat synchronizovane s volanim InsertItem() dole...
+    /* used by the export_mnu.py script that generates salmenu.mnu for Translator
+   keep synchronized with InsertItem() calls below...
 MENU_TEMPLATE_ITEM SortByMenu[] = 
 {
   {MNTT_PB, 0
@@ -1450,8 +1450,8 @@ MENU_TEMPLATE_ITEM SortByMenu[] =
 };
 */
 
-    // docasne reseni pro 1.6 beta 6: naleju vzdy (bez ohledu na ValidFileData)
-    // polozky Name, Ext, Date, Size
+    // temporary solution for 1.6 beta 6: always fill (regardless of ValidFileData)
+    // items Name, Ext, Date, Size
     // order must correspond with CSortType enum
     int textResID[5] = {IDS_COLUMN_MENU_NAME, IDS_COLUMN_MENU_EXT, IDS_COLUMN_MENU_TIME, IDS_COLUMN_MENU_SIZE, IDS_COLUMN_MENU_ATTR};
     int leftCmdID[5] = {CM_LEFTNAME, CM_LEFTEXT, CM_LEFTTIME, CM_LEFTSIZE, CM_LEFTATTR};
@@ -1501,7 +1501,7 @@ void CFilesWindow::SetThumbnailSize(int size)
     {
         if (size != ListBox->ThumbnailWidth || size != ListBox->ThumbnailHeight)
         {
-            // vycisteni icon-cache
+            // clear icon-cache
             SleepIconCacheThread();
             IconCache->Release();
             EndOfIconReadingTime = GetTickCount() - 10000;
@@ -1531,7 +1531,7 @@ void CFilesWindow::SetFont()
 {
     if (DirectoryLine != NULL)
         DirectoryLine->SetFont();
-    //if (ListBox != NULL)  // toto se nastavi z volani SetFont()
+    //if (ListBox != NULL)  // this is set from the SetFont() call
     //  ListBox->SetFont();
     if (StatusLine != NULL)
         StatusLine->SetFont();

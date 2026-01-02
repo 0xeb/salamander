@@ -525,7 +525,7 @@ C__Handles::C__Handles()
 #ifdef MULTITHREADED_HANDLES_ENABLE
     ::InitializeCriticalSection(&CriticalSection);
 #else  // MULTITHREADED_HANDLES_ENABLE
-    __HandlesMainThreadID = ::GetCurrentThreadId(); // jediny povoleny thread
+    __HandlesMainThreadID = ::GetCurrentThreadId(); // the only allowed thread
 #endif // MULTITHREADED_HANDLES_ENABLE
 }
 
@@ -544,7 +544,7 @@ C__Handles::~C__Handles()
     // check + list remaining
     if (Handles.Count != 0)
     {
-        // musel jsem nahradit nize polozeny kod vyuzivajici MESSAGE_E, protoze pri volani
+        // I had to replace the code below that uses MESSAGE_E, because when calling
         // this destructor, the stream facets in ALTAPDB are already destroyed and when sending an int
         // or handle to the stream it simply crashes (only happens in VC2010 and VC2012, in VC2008
         // it still works); in Salamander it doesn't cause issues, probably due to RTL in DLL (in ALTAPDB it is
@@ -945,13 +945,13 @@ C__Handles::CreateFileW(LPCWSTR lpFileName, DWORD dwDesiredAccess,
     HANDLE ret = ::CreateFileW(lpFileName, dwDesiredAccess, dwShareMode,
                                lpSecurityAttributes, dwCreationDisposition,
                                dwFlagsAndAttributes, hTemplateFile);
-    WCHAR paramsBuf[800 + 200]; // na jmena souboru omezime na 800 znaku, stejne delsi nevytiskneme diky omezeni MESSAGES
+    WCHAR paramsBuf[800 + 200]; // file names limited to 800 characters, longer ones will not be printed anyway due to MESSAGES limit
     const WCHAR* params = NULL;
     if (ret == INVALID_HANDLE_VALUE) // parameters to buffer only when error occurs (can be displayed)
     {
         DWORD err = GetLastError();
         _snwprintf_s(paramsBuf, _TRUNCATE,
-                     L"dwDesiredAccess=0x%X,\ndwShareMode=0x%X,\ndwCreationDisposition=0x%X,\ndwFlagsAndAttributes=0x%X,\nlpFileName=%s", // lpFileName mame schvalne az na konci, muze byt az 32k dlouhe, orizne se
+                     L"dwDesiredAccess=0x%X,\ndwShareMode=0x%X,\ndwCreationDisposition=0x%X,\ndwFlagsAndAttributes=0x%X,\nlpFileName=%s", // lpFileName intentionally at the end, can be up to 32k long, will be truncated
                      dwDesiredAccess, dwShareMode, dwCreationDisposition, dwFlagsAndAttributes, lpFileName);
         params = paramsBuf;
         SetLastError(err);

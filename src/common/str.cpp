@@ -204,7 +204,7 @@ done:
 
 /*
 // original function
-// pozor, zde je chyba StrNICmp("a", "aa", 2) vraci 0
+// warning, there is a bug here: StrNICmp("a", "aa", 2) returns 0
 int StrNICmp(const char *s1, const char *s2, int n)
 {
   int res;
