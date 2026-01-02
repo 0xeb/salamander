@@ -1,0 +1,74 @@
+name: Release Build
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build ${{ matrix.arch }}
+    runs-on: windows-2022
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            cmake_arch: x64
+          - arch: ARM64
+            cmake_arch: ARM64
+
+    defaults:
+      run:
+        shell: pwsh
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure CMake (${{ matrix.arch }})
+        run: cmake -B build -A ${{ matrix.cmake_arch }}
+
+      - name: Build RelWithDebInfo
+        run: cmake --build build --config RelWithDebInfo --target populate -j
+
+      - name: Create zip archive
+        run: |
+          $version = "${{ github.ref_name }}"
+          if (-not $version.StartsWith("v")) { $version = "dev" }
+          $zipName = "OpenSalamander-$version-${{ matrix.arch }}.zip"
+          Compress-Archive -Path "build/out/salamander/RelWithDebInfo_${{ matrix.arch }}/*" -DestinationPath $zipName
+          Write-Host "Created: $zipName"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: OpenSalamander-${{ matrix.arch }}
+          path: OpenSalamander-*.zip
+
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: List artifacts
+        run: find artifacts -type f -name "*.zip"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/**/*.zip
+          generate_release_notes: true
+          draft: false
+          prerelease: false
