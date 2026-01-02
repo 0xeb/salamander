@@ -7,7 +7,7 @@
 #include <tchar.h>
 #include <crtdbg.h>
 #include <ostream>
-#include <commctrl.h> // potrebuju LPCOLORMAP
+#include <commctrl.h> // I need LPCOLORMAP
 
 #if defined(_DEBUG) && defined(_MSC_VER) // without passing file+line to 'new' operator, list of memory leaks shows only 'crtdbg.h(552)'
 #define new new (_NORMAL_BLOCK, __FILE__, __LINE__)
@@ -25,15 +25,15 @@
 // boundaries so we can find the real functions
 // that we need to call for initialization.
 
-#pragma warning(disable : 4075) // chceme definovat poradi inicializace modulu
+#pragma warning(disable : 4075) // we want to define the order of module initialization
 
 typedef void(__cdecl* _PVFV)(void);
 
 #pragma section(".i_hnd$a", read)
-__declspec(allocate(".i_hnd$a")) const _PVFV i_handles = (_PVFV)1; // na zacatek sekce .i_hnd si dame promennou i_handles
+__declspec(allocate(".i_hnd$a")) const _PVFV i_handles = (_PVFV)1; // at the beginning of section .i_hnd we place the variable i_handles
 
 #pragma section(".i_hnd$z", read)
-__declspec(allocate(".i_hnd$z")) const _PVFV i_handles_end = (_PVFV)1; // a na konec sekce .i_hnd si dame promennou i_handles_end
+__declspec(allocate(".i_hnd$z")) const _PVFV i_handles_end = (_PVFV)1; // and at the end of section .i_hnd we place the variable i_handles_end
 
 void Initialize__Handles()
 {

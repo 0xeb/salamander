@@ -5,8 +5,8 @@
 
 #include <windows.h>
 
-// modul MS_INIT zajistuje volani konstruktoru statickych objektu ve spravnem poradi
-// a na urovni "lib" (pred "user")
+// The MS_INIT module ensures calling static object constructors in the correct order
+// and at the "lib" level (before "user")
 
 #pragma warning(3 : 4706) // warning C4706: assignment within conditional expression
 

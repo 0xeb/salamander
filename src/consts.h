@@ -823,9 +823,9 @@ WCHAR* LoadStrW(int resID, HINSTANCE hInstance = NULL); // taha wide-string z re
 // priklady formatovacich retezcu:
 //   - "{!}director{y|1|ies}" pro hodnotu parametru od 0 do 1 (vcetne) bude
 //     "directory" a pro hodnotu od 2 do "nekonecna" (2^64-1) bude "directories"
-//   - "{!}soubo{rů|0|r|1|ry|4|rů}" pro hodnotu parametru 0 bude "souborů",
-//     pro 1 bude "soubor", pro 2 az 4 (vcetne) bude "soubory" a od 5
-//     do "nekonecna" bude "souborů"
+//   - "{!}soubo{rů|0|r|1|ry|4|rů}" for parameter value 0 will be "souborů",
+//     for 1 will be "soubor", for 2 to 4 (inclusive) will be "soubory" and from 5
+//     to "infinity" will be "souborů"
 int ExpandPluralString(char* lpOut, int nOutMax, const char* lpFmt, int nParCount,
                        const CQuadWord* lpParArray);
 

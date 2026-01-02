@@ -10,13 +10,13 @@
 // CIconList
 //
 
-// udava pocet polozek v jedne radce; po vzoru W2K davame 4;
-// asi pro vetsi rychlost provadenych operaci?
+// Specifies the number of items in one row; following W2K pattern we use 4;
+// Probably for faster performance of operations?
 const int IL_ITEMS_IN_ROW = 4;
 
-#define IL_TYPE_NORMAL 0 // bezna ikona, kterou lze vykreslit pres BitBlt
-#define IL_TYPE_XOR 1    // ikona obsahujici oblasti, ktere je treba XORovat
-#define IL_TYPE_ALPHA 2  // ikona obsahujici alfa kanal
+#define IL_TYPE_NORMAL 0 // Regular icon that can be drawn via BitBlt
+#define IL_TYPE_XOR 1    // Icon containing areas that need to be XORed
+#define IL_TYPE_ALPHA 2  // Icon containing alpha channel
 
 HDC CIconList::HMemDC = NULL;
 HBITMAP CIconList::HOldBitmap = NULL;
@@ -101,8 +101,8 @@ BOOL CIconList::CreateOrEnlargeTmpImage(int width, int height)
 {
     if (HTmpImage == NULL || TmpImageWidth < width || TmpImageHeight < height)
     {
-        // !!! Pozor, pri pouzivani BITMAPV4HEADER u Petra padal Salamander v ICM32.DLL,
-        // stary BITMAPINFOHEADER zjevne staci
+        // !!! Warning: when using BITMAPV4HEADER with Peter, Salamander crashed in ICM32.DLL,
+        // old BITMAPINFOHEADER apparently is sufficient
         BITMAPINFOHEADER bmhdr;
         memset(&bmhdr, 0, sizeof(bmhdr));
         bmhdr.biSize = sizeof(bmhdr);
@@ -121,7 +121,7 @@ BOOL CIconList::CreateOrEnlargeTmpImage(int width, int height)
         }
 
         if (HTmpImage != NULL)
-            HANDLES(DeleteObject(HTmpImage)); // pokud existuje stara bitmapa, zrusime ji
+            HANDLES(DeleteObject(HTmpImage)); // if old bitmap exists, delete it
 
         HTmpImage = hBmp;
         TmpImageRaw = (DWORD*)lpBits;
@@ -153,12 +153,12 @@ BOOL CIconList::Create(int imageWidth, int imageHeight, int imageCount)
         HANDLES(LeaveCriticalSection(&CriticalSection));
         return FALSE;
     }
-    ZeroMemory(ImageFlags, sizeof(BYTE) * imageCount); // bez alfa kanalu
+    ZeroMemory(ImageFlags, sizeof(BYTE) * imageCount); // without alpha channel
 
     int bmpWidth = imageWidth * min(imageCount, IL_ITEMS_IN_ROW);
     int bmpHeight = imageHeight * ((imageCount + IL_ITEMS_IN_ROW - 1) / IL_ITEMS_IN_ROW);
 
-    // pomocne DC, abychom mohli vytvorit kompatibilni bitmapu
+    // Helper DC so we can create a compatible bitmap
     HDC hDC = HANDLES(GetDC(NULL));
     if (hDC == NULL)
     {
@@ -185,7 +185,7 @@ BOOL CIconList::Create(int imageWidth, int imageHeight, int imageCount)
     }
     MemDCLocks++;
 
-    // pokud jeste neexistuje cache/mask bitmapa nebo je mala, vytvorime ji
+    // If cache/mask bitmap does not exist yet or is small, create it
     if (!CreateOrEnlargeTmpImage(imageWidth, imageHeight))
     {
         HANDLES(ReleaseDC(NULL, hDC));
@@ -194,8 +194,8 @@ BOOL CIconList::Create(int imageWidth, int imageHeight, int imageCount)
         return FALSE;
     }
 
-    // !!! Pozor, pri pouzivani BITMAPV4HEADER u Petra padal Salamander v ICM32.DLL,
-    // stary BITMAPINFOHEADER zjevne staci
+    // !!! Warning: when using BITMAPV4HEADER with Peter, Salamander crashed in ICM32.DLL,
+    // old BITMAPINFOHEADER apparently is sufficient
     BITMAPINFOHEADER bmhdr;
     memset(&bmhdr, 0, sizeof(bmhdr));
     bmhdr.biSize = sizeof(bmhdr);
@@ -297,11 +297,11 @@ BYTE CIconList::ApplyMaskToImage(int index, BYTE forceXOR)
 {
     HANDLES(EnterCriticalSection(&CriticalSection));
 
-    // souradnice v bodech v HImage
+    // Coordinates in points in HImage
     int iX = ImageWidth * (index % IL_ITEMS_IN_ROW);
     int iY = ImageHeight * (index / IL_ITEMS_IN_ROW);
 
-    // prohledneme celou ikonku a urcime o jaky typ se jedna (NORMAL, XOR, ALPHA)
+    // Examine the entire icon and determine what type it is (NORMAL, XOR, ALPHA)
     BYTE type = IL_TYPE_NORMAL;
     if (forceXOR)
         type = IL_TYPE_XOR;
@@ -337,9 +337,9 @@ BYTE CIconList::ApplyMaskToImage(int index, BYTE forceXOR)
 SKIP:
     if (type == IL_TYPE_NORMAL)
     {
-        // pripravime si barvu pozadi ve spravnem formatu
+        // Prepare background color in correct format
         DWORD bkClr = GetRValue(BkColor) << 16 | GetGValue(BkColor) << 8 | GetBValue(BkColor);
-        // pruhledne oblasti masky preneseme do alfa kanalu
+        // Transfer transparent areas of mask to alpha channel
         int row;
         for (row = 0; row < ImageHeight; row++)
         {
@@ -356,7 +356,7 @@ SKIP:
                 }
                 else
                 {
-                    *ptr |= 0xFF000000; // oblast nastavime jako nepruhlednou
+                    *ptr |= 0xFF000000; // Set area as opaque
                 }
                 ptr++;
                 maskPtr++;
@@ -374,7 +374,7 @@ SKIP:
             for (col = 0; col < ImageWidth; col++)
             {
                 if (*maskPtr == 0)
-                    *ptr |= 0xFF000000; // nepruhledna oblast
+                    *ptr |= 0xFF000000; // Opaque area
 
                 ptr++;
                 maskPtr++;
@@ -458,7 +458,7 @@ BOOL CIconList::ReplaceIcon(int index, HICON hIcon)
     int iX = ImageWidth * (index % IL_ITEMS_IN_ROW);
     int iY = ImageHeight * (index / IL_ITEMS_IN_ROW);
 
-    // kontrola parametru
+    // Parameter check
     if (index < 0 || index >= ImageCount)
     {
         TRACE_E("CIconList::ReplaceIcon(): Index is out of range! index=" << index);
@@ -470,7 +470,7 @@ BOOL CIconList::ReplaceIcon(int index, HICON hIcon)
     // FIXME: provest audit, zda je tento downscale jeste potreba, kdyz SalLoadIcon() nove vola LoadIconWithScaleDown()
     hIcon = (HICON)CopyImage(hIconOrig, IMAGE_ICON, ImageWidth, ImageHeight, /*LR_COPYFROMRESOURCE | */ LR_COPYRETURNORG);
 
-    // vytahneme z handlu ikony jeji MASK a COLOR bitmapy
+    // Extract MASK and COLOR bitmaps from icon handle
     if (!GetIconInfo(hIcon, &ii))
     {
         TRACE_E("GetIconInfo() failed!");
@@ -485,23 +485,23 @@ BOOL CIconList::ReplaceIcon(int index, HICON hIcon)
         goto BAIL;
     }
 
-    // pokud se jedna o b&w ikonu, mela by mit sudou vysku
+    // If it is a B&W icon, it should have even height
     if (ii.hbmColor == NULL && (bm.bmHeight & 1) == 1)
     {
         TRACE_E("CIconList::ReplaceIcon() Icon has wrong MASK height");
         goto BAIL;
     }
-    // ikonka by mela mit stejne rozmery, jako ma nase polozka
+    // Icon should have the same size as our item
     if (bm.bmWidth != ImageWidth ||
         (ii.hbmColor == NULL && bm.bmHeight != ImageHeight * 2) ||
         (ii.hbmColor != NULL && bm.bmHeight != ImageHeight))
         TRACE_E("CIconList::ReplaceIcon() Icon has wrong size: bmWidth=" << bm.bmWidth << " bmHeight=" << bm.bmHeight);
 
-    // potrebujeme dostatecny prostor pro masku
+    // We need enough space for the mask
     if (!CreateOrEnlargeTmpImage(bm.bmWidth, bm.bmHeight))
         goto BAIL;
 
-    hSrcDC = HANDLES(CreateCompatibleDC(NULL)); // pomocne dc pro bitblt
+    hSrcDC = HANDLES(CreateCompatibleDC(NULL)); // Helper DC for BitBlt
     hOldSrcBmp = (HBITMAP)SelectObject(hSrcDC, ii.hbmMask);
 
     // ii.hbmMask -> HTmpImage
@@ -514,7 +514,7 @@ BOOL CIconList::ReplaceIcon(int index, HICON hIcon)
     SelectObject(HMemDC, HImage);
     BitBlt(HMemDC, iX, iY, ImageWidth, ImageHeight, hSrcDC, 0, (ii.hbmColor != NULL) ? 0 : ImageHeight, SRCCOPY);
 
-    GdiFlush(); // podle MSDN je treba zavolat nez zacneme pristupovat na raw data
+    GdiFlush(); // According to MSDN, must call before accessing raw data
 
     //  TRACE_I("counter: "<<counter);
     //  if (++counter == 19)
@@ -561,14 +561,14 @@ CIconList::GetIcon(int index, BOOL useHandles)
 HICON
 CIconList::GetIcon(int index)
 {
-    // kontrola parametru
+    // Parameter check
     if (index < 0 || index >= ImageCount)
     {
         TRACE_E("CIconList::GetIcon: index is out of range!");
         return NULL;
     }
 
-    // vytvorime B&W masku + barevnou bitmapu dle obrazovky
+    // Create B&W mask + color bitmap according to screen
     HDC hDC = HANDLES(GetDC(NULL));
     HBITMAP hMask = HANDLES(CreateBitmap(ImageWidth, ImageHeight, 1, 1, NULL));
     HBITMAP hColor = HANDLES(CreateCompatibleBitmap(hDC, ImageWidth, ImageHeight));
@@ -581,7 +581,7 @@ CIconList::GetIcon(int index)
 
     BYTE type = ImageFlags[index];
 
-    // do HTmpImage pripravime COLOR cast ikonky
+    // Prepare COLOR part of icon in HTmpImage
     int row;
     for (row = 0; row < ImageHeight; row++)
     {
@@ -612,7 +612,7 @@ CIconList::GetIcon(int index)
         }
     }
 
-    // preneseme HTmpImage do hColor
+    // Transfer HTmpImage to hColor
     SelectObject(HMemDC, HTmpImage);
     hDC = HANDLES(CreateCompatibleDC(NULL));
     HBITMAP hOldBmp = (HBITMAP)SelectObject(hDC, hColor);
@@ -620,7 +620,7 @@ CIconList::GetIcon(int index)
 
     SelectObject(hDC, hMask);
 
-    // do HTmpImage pripravime MASK cast ikonky
+    // Prepare MASK part of icon in HTmpImage
     for (row = 0; row < ImageHeight; row++)
     {
         DWORD* imagePtr = ImageRaw + iX + (iY + row) * BitmapWidth;
@@ -638,7 +638,7 @@ CIconList::GetIcon(int index)
         }
     }
 
-    // preneseme HTmpImage do hMask
+    // Transfer HTmpImage to hMask
     BitBlt(hDC, 0, 0, ImageWidth, ImageHeight, HMemDC, 0, 0, SRCCOPY);
 
     //  if (Dump)
@@ -647,7 +647,7 @@ CIconList::GetIcon(int index)
     //    DumpToTrace(index, TRUE);
     //  }
 
-    // zameteme
+    // Clean up
     SelectObject(hDC, hOldBmp);
     HANDLES(DeleteDC(hDC));
 
@@ -671,7 +671,7 @@ CIconList::GetIcon(int index)
 
 BOOL CIconList::Draw(int index, HDC hDC, int x, int y, COLORREF blendClr, DWORD flags)
 {
-    // kontrola parametru
+    // Parameter check
     if (index < 0 || index >= ImageCount)
     {
         TRACE_E("CIconList::Draw() Index is out of range! index=" << index << " ImageCount=" << ImageCount);
@@ -712,7 +712,7 @@ BOOL CIconList::DrawMask(HDC hDC, int x, int y, int index, COLORREF fgColor, COL
 {
     HANDLES(EnterCriticalSection(&CriticalSection));
 
-    // souradnice v bodech v HImage
+    // Coordinates in points in HImage
     int iX = ImageWidth * (index % IL_ITEMS_IN_ROW);
     int iY = ImageHeight * (index / IL_ITEMS_IN_ROW);
 
@@ -726,7 +726,7 @@ BOOL CIconList::DrawMask(HDC hDC, int x, int y, int index, COLORREF fgColor, COL
     SelectObject(HMemDC, HTmpImage);
     BitBlt(HMemDC, 0, 0, ImageWidth, ImageHeight, hDC, x, y, SRCCOPY);
 
-    // budeme kreslit do HTmpImage
+    // Will draw into HTmpImage
     int row;
     for (row = 0; row < ImageHeight; row++)
     {
@@ -739,7 +739,7 @@ BOOL CIconList::DrawMask(HDC hDC, int x, int y, int index, COLORREF fgColor, COL
             BYTE alpha = (BYTE)((argb & 0xFF000000) >> 24);
 
             DWORD clr = (alpha == 0) ? bkColor : fgColor;
-            if (alpha != 0) // *** viz komentar nahore
+            if (alpha != 0) // *** see comment above
                 *tmpPtr = clr;
 
             imagePtr++;
@@ -747,7 +747,7 @@ BOOL CIconList::DrawMask(HDC hDC, int x, int y, int index, COLORREF fgColor, COL
         }
     }
 
-    // vykreslime HTmpImage do obrazovky
+    // Render HTmpImage to screen
     //  SelectObject(HMemDC, HTmpImage);
     BitBlt(hDC, x, y, ImageWidth, ImageHeight, HMemDC, 0, 0, SRCCOPY);
 
@@ -759,11 +759,11 @@ BOOL CIconList::DrawXOR(HDC hDC, int x, int y, int index, COLORREF bkColor)
 {
     HANDLES(EnterCriticalSection(&CriticalSection));
 
-    // souradnice v bodech v HImage
+    // Coordinates in points in HImage
     int iX = ImageWidth * (index % IL_ITEMS_IN_ROW);
     int iY = ImageHeight * (index / IL_ITEMS_IN_ROW);
 
-    // budeme kreslit do HTmpImage
+    // Will draw into HTmpImage
     BYTE bkR = GetRValue(bkColor);
     BYTE bkG = GetGValue(bkColor);
     BYTE bkB = GetBValue(bkColor);
@@ -789,7 +789,7 @@ BOOL CIconList::DrawXOR(HDC hDC, int x, int y, int index, COLORREF bkColor)
         }
     }
 
-    // vykreslime HTmpImage do obrazovky
+    // Render HTmpImage to screen
     SelectObject(HMemDC, HTmpImage);
     BitBlt(hDC, x, y, ImageWidth, ImageHeight, HMemDC, 0, 0, SRCCOPY);
 
@@ -801,11 +801,11 @@ BOOL CIconList::DrawALPHA(HDC hDC, int x, int y, int index, COLORREF bkColor)
 {
     HANDLES(EnterCriticalSection(&CriticalSection));
 
-    // souradnice v bodech v HImage
+    // Coordinates in points in HImage
     int iX = ImageWidth * (index % IL_ITEMS_IN_ROW);
     int iY = ImageHeight * (index / IL_ITEMS_IN_ROW);
 
-    // v prvni fazi preneseme data do HMask
+    // In first phase transfer data to HMask
     SelectObject(HMemDC, HTmpImage);
 
     BYTE bkR = GetRValue(bkColor);
@@ -844,7 +844,7 @@ BOOL CIconList::DrawALPHA(HDC hDC, int x, int y, int index, COLORREF bkColor)
         }
     }
 
-    // vykreslime HTmpImage do obrazovky
+    // Render HTmpImage to screen
     BitBlt(hDC, x, y, ImageWidth, ImageHeight, HMemDC, 0, 0, SRCCOPY);
 
     HANDLES(LeaveCriticalSection(&CriticalSection));
@@ -856,14 +856,14 @@ BOOL CIconList::DrawALPHALeaveBackground(HDC hDC, int x, int y, int index)
 {
     HANDLES(EnterCriticalSection(&CriticalSection));
 
-    // souradnice v bodech v HImage
+    // Coordinates in points in HImage
     int iX = ImageWidth * (index % IL_ITEMS_IN_ROW);
     int iY = ImageHeight * (index / IL_ITEMS_IN_ROW);
 
-    // v prvni fazi preneseme z ciloveho DC data do HMask
+    // In first phase transfer data from target DC to HMask
     SelectObject(HMemDC, HTmpImage);
     BitBlt(HMemDC, 0, 0, ImageWidth, ImageHeight, hDC, x, y, SRCCOPY);
-    GdiFlush(); // podle MSDN je treba zavolat nez zacneme pristupovat na raw data
+    GdiFlush(); // According to MSDN, must call before accessing raw data
 
     /*
   BYTE bkR = GetRValue(bkColor);
@@ -905,7 +905,7 @@ BOOL CIconList::DrawALPHALeaveBackground(HDC hDC, int x, int y, int index)
         }
     }
 
-    // vykreslime HTmpImage do obrazovky
+    // Render HTmpImage to screen
     BitBlt(hDC, x, y, ImageWidth, ImageHeight, HMemDC, 0, 0, SRCCOPY);
 
     HANDLES(LeaveCriticalSection(&CriticalSection));
@@ -917,14 +917,14 @@ BOOL CIconList::DrawAsAlphaLeaveBackground(HDC hDC, int x, int y, int index, COL
 {
     HANDLES(EnterCriticalSection(&CriticalSection));
 
-    // souradnice v bodech v HImage
+    // Coordinates in points in HImage
     int iX = ImageWidth * (index % IL_ITEMS_IN_ROW);
     int iY = ImageHeight * (index / IL_ITEMS_IN_ROW);
 
-    // v prvni fazi preneseme z ciloveho DC data do HMask
+    // In first phase transfer data from target DC to HMask
     SelectObject(HMemDC, HTmpImage);
     BitBlt(HMemDC, 0, 0, ImageWidth, ImageHeight, hDC, x, y, SRCCOPY);
-    GdiFlush(); // podle MSDN je treba zavolat nez zacneme pristupovat na raw data
+    GdiFlush(); // According to MSDN, must call before accessing raw data
 
     BYTE fgR = GetRValue(fgColor);
     BYTE fgG = GetGValue(fgColor);
@@ -956,7 +956,7 @@ BOOL CIconList::DrawAsAlphaLeaveBackground(HDC hDC, int x, int y, int index, COL
         }
     }
 
-    // vykreslime HTmpImage do obrazovky
+    // Render HTmpImage to screen
     BitBlt(hDC, x, y, ImageWidth, ImageHeight, HMemDC, 0, 0, SRCCOPY);
 
     HANDLES(LeaveCriticalSection(&CriticalSection));
@@ -968,14 +968,14 @@ BOOL CIconList::AlphaBlend(HDC hDC, int x, int y, int index, COLORREF bkColor, C
 {
     HANDLES(EnterCriticalSection(&CriticalSection));
 
-    // souradnice v bodech v HImage
+    // Coordinates in points in HImage
     int iX = ImageWidth * (index % IL_ITEMS_IN_ROW);
     int iY = ImageHeight * (index / IL_ITEMS_IN_ROW);
 
     // jde o variantu, kde je treba XORovat?
     BOOL xorType = ImageFlags[index] == IL_TYPE_XOR;
 
-    // v prvni pripravime raw data pro HTmpImage
+    // First prepare raw data for HTmpImage
     int bitsPerPixel = GetCurrentBPP(hDC);
     if (bitsPerPixel <= 8)
     {
@@ -999,7 +999,7 @@ BOOL CIconList::AlphaBlend(HDC hDC, int x, int y, int index, COLORREF bkColor, C
 
                 if (xorType && alpha == 0)
                 {
-                    // XOR && pruhledna oblast
+                    // XOR && transparent area
                     BYTE bkR = GetRValue(bkColor);
                     BYTE bkG = GetGValue(bkColor);
                     BYTE bkB = GetBValue(bkColor);
@@ -1051,7 +1051,7 @@ BOOL CIconList::AlphaBlend(HDC hDC, int x, int y, int index, COLORREF bkColor, C
 
                 if (xorType && alpha == 0)
                 {
-                    // XOR && pruhledna oblast
+                    // XOR && transparent area
                     *tmpPtr = (DWORD)bkR << 16 | (DWORD)bkG << 8 | (DWORD)bkB;
                     *tmpPtr ^= (argb & 0x00FFFFFF);
                 }
@@ -1086,7 +1086,7 @@ BOOL CIconList::AlphaBlend(HDC hDC, int x, int y, int index, COLORREF bkColor, C
         }
     }
 
-    // vykreslime HTmpImage do obrazovky
+    // Render HTmpImage to screen
     SelectObject(HMemDC, HTmpImage);
     BitBlt(hDC, x, y, ImageWidth, ImageHeight, HMemDC, 0, 0, SRCCOPY);
 
@@ -1145,7 +1145,7 @@ CIconList::GetBkColor()
 
 BOOL CIconList::Copy(int dstIndex, CIconList* srcIL, int srcIndex)
 {
-    // kontrola parametru
+    // Parameter check
     if (dstIndex < 0 || dstIndex >= ImageCount)
     {
         TRACE_E("CIconList::Copy: dstIndex is out of range!");
@@ -1303,7 +1303,7 @@ BOOL CIconList::CopyFromBitmapIternal(int dstIndex, HBITMAP hSrcBitmap, int srcI
     BitBlt(HMemDC, dstX, dstY, ImageWidth * imageCount, ImageHeight, hSrcMemDC, srcX, srcY, SRCCOPY);
     ImageFlags[dstIndex] = IL_TYPE_NORMAL;
 
-    GdiFlush(); // podle MSDN je treba zavolat nez zacneme pristupovat na raw data
+    GdiFlush(); // According to MSDN, must call before accessing raw data
 
     // podle transparentni barvy nastavime alpha kanal
     int row;

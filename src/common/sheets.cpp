@@ -44,7 +44,7 @@ void CElasticLayout::AddResizeCtrl(int resID)
         RECT r;
         GetWindowRect(hChild, &r);
 
-        // pokud je spodni hrana prvku vetsi nez SplitY, posuneme SplitY hranici
+        // if the bottom edge of the control is larger than SplitY, move the SplitY border
         POINT p = {r.right, r.bottom};
         ScreenToClient(HWindow, &p);
         if (p.y > SplitY)
@@ -67,7 +67,7 @@ CElasticLayout::FindMoveControls(HWND hChild, LPARAM lParam)
 {
     CElasticLayout* el = (CElasticLayout*)lParam;
 
-    // pokud prvek lezi pod SplitY, pridame ho do seznamu prvku, ktere budou posouvat
+    // if the element is below SplitY, add it to the list of elements to be moved
     RECT r;
     GetWindowRect(hChild, &r);
     POINT p = {r.left, r.top};
@@ -87,7 +87,7 @@ void CElasticLayout::FindMoveCtrls()
 {
     EnumChildWindows(HWindow, FindMoveControls, (LPARAM)this);
 
-    // najdeme obalku vsech 'move' prvku
+    // find the envelope of all 'move' elements
     RECT rEnvelope = {0};
     for (int i = 0; i < MoveCtrls.Count; i++)
     {
@@ -107,11 +107,11 @@ void CElasticLayout::FindMoveCtrls()
     POINT p = {rEnvelope.right, rEnvelope.bottom};
     ScreenToClient(HWindow, &p);
     int envelopeBottom = p.y;
-    // souradnice 'MoveCtrlsY' budou vztazene od spodni hrany obalky
+    // coordinates 'MoveCtrlsY' will be relative to the bottom edge of the envelope
     for (int i = 0; i < MoveCtrls.Count; i++)
         MoveCtrls[i].Pos.y = envelopeBottom - MoveCtrls[i].Pos.y;
 
-    // pro prvky ResizeCtrls ulozime jejich vzdalenost spodni hrany od spodni hrany obalky
+    // for ResizeCtrls elements store their distance from the bottom edge to the bottom edge of the envelope
     for (int i = 0; i < ResizeCtrls.Count; i++)
     {
         if (ResizeCtrls[i].Pos.y == 0)
@@ -198,7 +198,7 @@ void CPropSheetPage::Init(const TCHAR* title, HINSTANCE modul, int resID,
     Flags = flags;
     Icon = icon;
 
-    ParentDialog = NULL; // nastavuje se z CPropertyDialog::Execute()
+    ParentDialog = NULL; // set from CPropertyDialog::Execute()
     ParentPage = NULL;
     HTreeItem = NULL;
     Expanded = NULL;
@@ -290,7 +290,7 @@ CPropSheetPage::DialogProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
         TransferData(ttDataToWindow);
         if (ElasticLayout != NULL)
             ElasticLayout->LayoutCtrls();
-        return TRUE; // chci focus od DefDlgProc
+        return TRUE; // I want focus from DefDlgProc
     }
 
     case WM_SIZE:
@@ -309,7 +309,7 @@ CPropSheetPage::DialogProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
                                (GetKeyState(VK_SHIFT) & 0x8000) != 0);
             return TRUE;
         }
-        break; // F1 nechame propadnout do parenta
+        break; // F1 let through to parent
     }
 
     case WM_CONTEXTMENU:
@@ -321,26 +321,26 @@ CPropSheetPage::DialogProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
 
     case WM_NOTIFY:
     {
-        if (((NMHDR*)lParam)->code == PSN_KILLACTIVE) // deaktivace stranky
+        if (((NMHDR*)lParam)->code == PSN_KILLACTIVE) // page deactivation
         {
             if (ValidateData())
                 SetWindowLongPtr(HWindow, DWLP_MSGRESULT, FALSE);
-            else // nepovolime deaktivaci stranky
+            else // do not allow page deactivation
                 SetWindowLongPtr(HWindow, DWLP_MSGRESULT, TRUE);
             return TRUE;
         }
 
-        if (((NMHDR*)lParam)->code == PSN_SETACTIVE) // aktivace stranky
+        if (((NMHDR*)lParam)->code == PSN_SETACTIVE) // page activation
         {
             if (ParentDialog != NULL && ParentDialog->LastPage != NULL)
-            { // zapamatovani posledni stranky
+            { // remember the last page
                 *ParentDialog->LastPage = ParentDialog->GetCurSel();
             }
             break;
         }
 
         if (((NMHDR*)lParam)->code == PSN_APPLY)
-        { // stisknuto tlacitko ApplyNow nebo OK
+        { // Apply Now or OK button pressed
             if (TransferData(ttDataFromWindow))
                 SetWindowLongPtr(HWindow, DWLP_MSGRESULT, PSNRET_NOERROR);
             else
@@ -349,15 +349,15 @@ CPropSheetPage::DialogProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
         }
 
         if (((NMHDR*)lParam)->code == PSN_WIZFINISH)
-        { // stisknuto tlacitko Finish
-            // neprislo PSN_KILLACTIVE - provedu validaci
+        { // Finish button pressed
+            // PSN_KILLACTIVE did not arrive - perform validation
             if (!ValidateData())
             {
                 SetWindowLongPtr(HWindow, DWLP_MSGRESULT, TRUE);
                 return TRUE;
             }
 
-            // obehnu vsechny stranky pro transfer
+            // iterate through all pages for transfer
             for (int i = 0; i < ParentDialog->Count; i++)
             {
                 if (ParentDialog->At(i)->HWindow != NULL)
@@ -385,7 +385,7 @@ CPropSheetPage::CPropSheetPageProc(HWND hwndDlg, UINT uMsg, WPARAM wParam,
     CPropSheetPage* dlg;
     switch (uMsg)
     {
-    case WM_INITDIALOG: // prvni zprava - pripojeni objektu k dialogu
+    case WM_INITDIALOG: // first message - attach object to dialog
     {
         dlg = (CPropSheetPage*)((PROPSHEETPAGE*)lParam)->lParam;
         if (dlg == NULL)
@@ -397,8 +397,8 @@ CPropSheetPage::CPropSheetPageProc(HWND hwndDlg, UINT uMsg, WPARAM wParam,
         {
             dlg->HWindow = hwndDlg;
             dlg->Parent = ::GetParent(hwndDlg);
-            //--- zarazeni okna podle hwndDlg do seznamu oken
-            if (!WindowsManager.AddWindow(hwndDlg, dlg)) // chyba
+            //--- insert window according to hwndDlg into the list of windows
+            if (!WindowsManager.AddWindow(hwndDlg, dlg)) // error
             {
                 TRACE_ET(_T("Unable to create dialog."));
                 return TRUE;
@@ -408,14 +408,14 @@ CPropSheetPage::CPropSheetPageProc(HWND hwndDlg, UINT uMsg, WPARAM wParam,
         break;
     }
 
-    case WM_DESTROY: // posledni zprava - odpojeni objektu od dialogu
+    case WM_DESTROY: // last message - detach object from dialog
     {
         dlg = (CPropSheetPage*)WindowsManager.GetWindowPtr(hwndDlg);
-        INT_PTR ret = FALSE; // pro pripad, ze ji nezpracuje
+        INT_PTR ret = FALSE; // in case it is not processed
         if (dlg != NULL && dlg->Is(otDialog))
         {
-            // Petr: posunul jsem dolu pod wnd->WindowProc(), aby behem WM_DESTROY
-            //       jeste dochazely zpravy (potreboval Lukas)
+            // Petr: I moved down below wnd->WindowProc() so that during WM_DESTROY
+            //       messages still arrive (Lukas needed it)
             // WindowsManager.DetachWindow(hwndDlg);
 
             ret = dlg->DialogProc(uMsg, wParam, lParam);
@@ -445,7 +445,7 @@ CPropSheetPage::CPropSheetPageProc(HWND hwndDlg, UINT uMsg, WPARAM wParam,
     if (dlg != NULL)
         return dlg->DialogProc(uMsg, wParam, lParam);
     else
-        return FALSE; // chyba nebo message neprisla mezi WM_INITDIALOG a WM_DESTROY
+        return FALSE; // error or message did not arrive between WM_INITDIALOG and WM_DESTROY
 }
 
 //
@@ -511,11 +511,11 @@ int CPropertyDialog::GetCurSel()
 #define _TPD_IDC_CAPTION 3
 #define _TPD_IDC_RECT 4
 #define _TPD_IDC_OK 5
-// rozmery v dlg units
-#define _TPD_LEFTMARGIN 4  // odsazeni TreeView a Captionu od leveho okraje
-#define _TPD_TOPMARGIN 4   // odsazeni TreeView a Captionu od horniho okraje
-#define _TPD_TREE_W 100    // sirka TreeView
-#define _TPD_CAPTION_H 16  // vyska captionu
+// dimensions in dlg units
+#define _TPD_LEFTMARGIN 4  // indentation of TreeView and Caption from left edge
+#define _TPD_TOPMARGIN 4   // indentation of TreeView and Caption from top edge
+#define _TPD_TREE_W 100    // width of TreeView
+#define _TPD_CAPTION_H 16  // height of caption
 #define _TPD_BUTTON_W 50   // sirka tlacitek
 #define _TPD_BUTTON_H 14   // vyska tlacitek
 #define _TPD_BUTTON_MARG 4 // rozestup mezi tlacitky
