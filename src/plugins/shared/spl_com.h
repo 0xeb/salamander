@@ -21,6 +21,8 @@
 #pragma option -a4
 #endif // __BORLANDC__
 
+#include <string>
+
 // in the plugin you need to define variable SalamanderVersion (int) and initialize it
 // in SalamanderPluginEntry:
 // SalamanderVersion = salamander->GetVersion();
@@ -215,9 +217,9 @@ struct CFileData // destructor must not be added here!
     FILETIME LastWrite;            // last write time to file (UTC-based time)
     char* DosName;                 // allocated DOS 8.3 file name, NULL if not needed, must be
                                    // allocated on Salamander's heap (see CSalamanderGeneralAbstract::Alloc/Realloc/Free)
-    wchar_t* NameW;                // allocated wide (Unicode) file name, NULL if Name can represent the filename
-                                   // correctly (all chars fit in current ANSI codepage); must be allocated on
-                                   // Salamander's heap; use NameW when available for display and file operations
+    std::wstring NameW;            // wide (Unicode) file name, empty if Name can represent the filename
+                                   // correctly (all chars fit in current ANSI codepage);
+                                   // use NameW when available for display and file operations
     DWORD_PTR PluginData;          // used by plugin through CPluginDataInterfaceAbstract, Salamander ignores it
     unsigned NameLen : 9;          // length of Name string (strlen(Name)) - WARNING: maximum name length is (MAX_PATH - 5)
     unsigned Hidden : 1;           // is hidden? (if 1, icon is 50% more transparent - ghosted)
@@ -237,7 +239,7 @@ struct CFileData // destructor must not be added here!
 
     // Returns true if this file requires wide string APIs for correct display/operations
     // (i.e., the filename contains characters that can't be represented in the current ANSI codepage)
-    bool UseWideName() const { return NameW != nullptr; }
+    bool UseWideName() const { return !NameW.empty(); }
 };
 
 // constants determining validity of data that is directly stored in CFileData (size, extension, etc.)

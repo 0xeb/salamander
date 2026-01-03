@@ -528,17 +528,7 @@ BOOL CFilesWindow::ReadDirectory(HWND parent, BOOL isRefresh)
 
                 //--- wide name (for Unicode filenames not representable in ANSI)
                 if (nameConversionLossy)
-                {
-                    int wideLen = (int)wcslen(fileDataW.cFileName);
-                    file.NameW = (wchar_t*)malloc((wideLen + 1) * sizeof(wchar_t));
-                    if (file.NameW != NULL)
-                        wcscpy(file.NameW, fileDataW.cFileName);
-                    // Note: if allocation fails, we continue with ANSI-only (graceful degradation)
-                }
-                else
-                {
-                    file.NameW = NULL;
-                }
+                    file.NameW = fileDataW.cFileName;
 
                 //--- extension
                 if (!Configuration.SortDirsByExt && (fileDataW.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) // this is ptDisk
@@ -581,8 +571,6 @@ BOOL CFilesWindow::ReadDirectory(HWND parent, BOOL isRefresh)
                     if (file.DosName == NULL)
                     {
                         free(file.Name);
-                        if (file.NameW != NULL)
-                            free(file.NameW);
                         if (search != NULL)
                         {
                             DestroySafeWaitWindow();
@@ -624,8 +612,6 @@ BOOL CFilesWindow::ReadDirectory(HWND parent, BOOL isRefresh)
                                 free(file.Name);
                             if (file.DosName != NULL)
                                 free(file.DosName);
-                            if (file.NameW != NULL)
-                                free(file.NameW);
                         }
                         addtoIconCache = FALSE;
                     }

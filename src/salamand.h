@@ -73,8 +73,6 @@ public:
         free(member.Name);
         if (member.DosName != NULL)
             free(member.DosName);
-        if (member.NameW != NULL)
-            free(member.NameW);
     }
 };
 

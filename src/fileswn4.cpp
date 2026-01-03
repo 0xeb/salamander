@@ -688,7 +688,7 @@ void CFilesWindow::DrawBriefDetailedItem(HDC hTgtDC, int itemIndex, RECT* itemRe
             int nameLenW = 0;
             if (useWideDisplay)
             {
-                nameLenW = (int)wcslen(f->NameW);
+                nameLenW = (int)f->NameW.length();
                 // For Unicode names, we don't apply AlterFileName transformation yet
                 // (TODO: add AlterFileNameW for proper uppercase/lowercase handling)
             }
@@ -704,7 +704,7 @@ void CFilesWindow::DrawBriefDetailedItem(HDC hTgtDC, int itemIndex, RECT* itemRe
                 {
                     textWidth = nameWidth - 1 - IconSizes[ICONSIZE_16] - 1 - 2 - SPACE_WIDTH;
                     if (useWideDisplay)
-                        GetTextExtentExPointW(hDC, f->NameW, nameLenW, textWidth,
+                        GetTextExtentExPointW(hDC, f->NameW.c_str(), nameLenW, textWidth,
                                               &fitChars, DrawItemAlpDx, &fnSZ);
                     else
                         GetTextExtentExPoint(hDC, TransferBuffer, nameLen, textWidth,
@@ -717,7 +717,7 @@ void CFilesWindow::DrawBriefDetailedItem(HDC hTgtDC, int itemIndex, RECT* itemRe
                 else
                 {
                     if (useWideDisplay)
-                        GetTextExtentPoint32W(hDC, f->NameW, nameLenW, &fnSZ);
+                        GetTextExtentPoint32W(hDC, f->NameW.c_str(), nameLenW, &fnSZ);
                     else
                         GetTextExtentPoint32(hDC, TransferBuffer, nameLen, &fnSZ);
                     adjR.right = r.right = rect.left + 1 + IconSizes[ICONSIZE_16] + 1 + 2 + fnSZ.cx + 3;
@@ -736,7 +736,7 @@ void CFilesWindow::DrawBriefDetailedItem(HDC hTgtDC, int itemIndex, RECT* itemRe
                     // the string may be longer than the available space and must end with "..."
                     textWidth = nameWidth - 1 - IconSizes[ICONSIZE_16] - 1 - 2 - SPACE_WIDTH;
                     if (useWideDisplay)
-                        GetTextExtentExPointW(hDC, f->NameW, nameLenW, textWidth,
+                        GetTextExtentExPointW(hDC, f->NameW.c_str(), nameLenW, textWidth,
                                               &fitChars, DrawItemAlpDx, &fnSZ);
                     else
                         GetTextExtentExPoint(hDC, TransferBuffer, nameLen, textWidth,
@@ -753,7 +753,7 @@ void CFilesWindow::DrawBriefDetailedItem(HDC hTgtDC, int itemIndex, RECT* itemRe
                     {
                         if (fitChars > 0)
                         {
-                            wmemmove(DrawItemBuffW, f->NameW, fitChars);
+                            wmemmove(DrawItemBuffW, f->NameW.c_str(), fitChars);
                             // and append "..."
                             wmemmove(DrawItemBuffW + fitChars, L"...", 3);
                             totalCount = fitChars + 3;
@@ -790,7 +790,7 @@ void CFilesWindow::DrawBriefDetailedItem(HDC hTgtDC, int itemIndex, RECT* itemRe
             }
             // DRAWFLAG_MASK: hack, under XP some stuff is added in font of the text in the mask while drawing short texts; not an issue if text is not drawn
             if (useWideDisplay)
-                ExtTextOutW(hDC, r.left + 2, y, ETO_OPAQUE, &adjR, f->NameW, (drawFlags & DRAWFLAG_MASK) ? 0 : nameLenW, NULL);
+                ExtTextOutW(hDC, r.left + 2, y, ETO_OPAQUE, &adjR, f->NameW.c_str(), (drawFlags & DRAWFLAG_MASK) ? 0 : nameLenW, NULL);
             else
                 ExtTextOut(hDC, r.left + 2, y, ETO_OPAQUE, &adjR, TransferBuffer, (drawFlags & DRAWFLAG_MASK) ? 0 : nameLen, NULL);
         SKIP1:
@@ -1632,7 +1632,7 @@ void CFilesWindow::DrawIconThumbnailItem(HDC hTgtDC, int itemIndex, RECT* itemRe
         BOOL useWideDisplay = f->UseWideName();
         int nameLenW = 0;
         if (useWideDisplay)
-            nameLenW = (int)wcslen(f->NameW);
+            nameLenW = (int)f->NameW.length();
 
         // maximum width available for the text
         int maxWidth = itemWidth - 4 - 1; // -1 so they don't touch
@@ -1652,7 +1652,7 @@ void CFilesWindow::DrawIconThumbnailItem(HDC hTgtDC, int itemIndex, RECT* itemRe
         if (useWideDisplay)
         {
             // Use wide string processing for Unicode filenames
-            SplitTextW(hDC, f->NameW, nameLenW, &maxWidth,
+            SplitTextW(hDC, f->NameW.c_str(), nameLenW, &maxWidth,
                        out1W, &out1Len, &out1Width,
                        out2W, &out2Len, &out2Width);
         }
@@ -2102,8 +2102,8 @@ void CFilesWindow::DrawTileItem(HDC hTgtDC, int itemIndex, RECT* itemRect, DWORD
         if (useWideDisplay)
         {
             // Handle Unicode filename separately
-            out0LenW = (int)wcslen(f->NameW);
-            wmemcpy(out0W, f->NameW, out0LenW + 1);
+            out0LenW = (int)f->NameW.length();
+            wmemcpy(out0W, f->NameW.c_str(), out0LenW + 1);
             TruncateSringToFitWidthW(hDC, out0W, &out0LenW, maxTextWidth, &widthNeeded);
 
             // Still call GetTileTexts for size and date/time (out1, out2), but skip filename
