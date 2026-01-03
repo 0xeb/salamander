@@ -69,6 +69,8 @@ This project welcomes contributions to build and enhance Open Salamander!
 ## Repository Content
 
 ```
+\.github         GitHub Actions CI/CD workflows
+\cmake           CMake build modules and cross-compilation toolchains
 \convert         Conversion tables for the Convert command
 \doc             Documentation
 \help            User manual source files
@@ -82,9 +84,10 @@ This project welcomes contributions to build and enhance Open Salamander!
 \src\salmon      Crash detecting and reporting
 \src\salopen     Open files helper
 \src\salspawn    Process spawning helper
-\src\setup       Installer and uinstaller
+\src\setup       Installer and uninstaller
 \src\sfx7zip     Self-extractor based on 7-Zip
 \src\shellext    Shell extension DLL
+\src\tests       Unit tests
 \src\translator  Translate Salamander UI to other languages
 \src\tserver     Trace Server to display info and error messages
 \src\vcxproj     Visual Studio project files
