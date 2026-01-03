@@ -1699,6 +1699,10 @@ void SplitText(HDC hDC, const char* text, int textLen, int* maxWidth,
                char* out1, int* out1Len, int* out1Width,
                char* out2, int* out2Len, int* out2Width);
 
+void SplitTextW(HDC hDC, const wchar_t* text, int textLen, int* maxWidth,
+                wchar_t* out1, int* out1Len, int* out1Width,
+                wchar_t* out2, int* out2Len, int* out2Width);
+
 //
 // Copies the UNC form of a path to the clipboard.
 // 'path' is the path either in direct or UNC form

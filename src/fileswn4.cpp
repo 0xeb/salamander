@@ -1178,6 +1178,142 @@ void SplitText(HDC hDC, const char* text, int textLen, int* maxWidth,
     *maxWidth = max(*out1Width, *out2Width);
 }
 
+// Wide version of SplitText for Unicode filenames
+void SplitTextW(HDC hDC, const wchar_t* text, int textLen, int* maxWidth,
+                wchar_t* out1, int* out1Len, int* out1Width,
+                wchar_t* out2, int* out2Len, int* out2Width)
+{
+    SIZE sz;
+    // measure the width of every character
+    GetTextExtentExPointW(hDC, text, textLen, 0, NULL, DrawItemAlpDx, &sz);
+
+    if (sz.cx > *maxWidth)
+    {
+        // if the text length exceeds the maximum width,
+        // try to split it into two lines at a space
+        // anything that still exceeds is replaced with "..."
+
+        // find the last character that still fits on the first line
+        // while also tracking the index of the last space
+        int lastSpaceIndex = -1;
+        int maxW = *maxWidth;
+        int w = 0;
+        int index = 0;
+        while (index < maxW) // this condition should not be applied
+        {
+            if (text[index] == L' ')
+                lastSpaceIndex = index;
+            if (DrawItemAlpDx[index] <= maxW)
+                index++;
+            else
+                break;
+        }
+
+        if (lastSpaceIndex != -1)
+        {
+            // if we found a space, break the first line there
+            // (the space is omitted to save room)
+            if (lastSpaceIndex > 0)
+            {
+                *out1Len = min(*out1Len, lastSpaceIndex);
+                *out1Width = DrawItemAlpDx[lastSpaceIndex - 1];
+                wmemmove(out1, text, *out1Len);
+            }
+            else
+            {
+                *out1Len = 0;
+                *out1Width = 0;
+            }
+
+            // move the pointer past the space
+            index = lastSpaceIndex + 1;
+        }
+        else
+        {
+            // no space encountered yet, so we must break with an ellipsis
+
+            // append "..." at the end of the string
+            int backTrackIndex = index - 1;
+            while (DrawItemAlpDx[backTrackIndex] + TextEllipsisWidth > maxW && backTrackIndex > 0)
+                backTrackIndex--;
+
+            *out1Len = min(*out1Len, backTrackIndex + 3);
+            *out1Width = DrawItemAlpDx[backTrackIndex - 1] + TextEllipsisWidth;
+            wmemmove(out1, text, *out1Len - 3);
+            if (*out1Len >= 3)
+                wmemmove(out1 + *out1Len - 3, L"...", 3);
+
+            // look for a space where we can continue to the next line
+            while (index < textLen)
+            {
+                if (text[index++] == L' ')
+                    break;
+            }
+        }
+
+        if (index < textLen)
+        {
+            // process the second line
+            int oldIndex = index;
+            int offsetX;
+
+            if (index > 0)
+                offsetX = DrawItemAlpDx[index - 1]; // width of the first line including the separating space
+            else
+                offsetX = 0;
+
+            while (index < textLen)
+            {
+                if (DrawItemAlpDx[index] - offsetX < maxW)
+                    index++;
+                else
+                    break;
+            }
+
+            if (index < textLen)
+            {
+                // the second line didn't fit completely; append an ellipsis
+                int backTrackIndex = index - 1;
+                while (DrawItemAlpDx[backTrackIndex] - offsetX + TextEllipsisWidth > maxW &&
+                       backTrackIndex > oldIndex)
+                    backTrackIndex--;
+
+                *out2Len = min(*out2Len, backTrackIndex - oldIndex + 3);
+                *out2Width = DrawItemAlpDx[backTrackIndex - 1] - offsetX + TextEllipsisWidth;
+                wmemmove(out2, text + oldIndex, *out2Len - 3);
+                if (*out2Len >= 3)
+                    wmemmove(out2 + *out2Len - 3, L"...", 3);
+            }
+            else
+            {
+                // the second line fit completely
+                wmemmove(out2, text + oldIndex, index - oldIndex);
+                *out2Len = index - oldIndex;
+                *out2Width = DrawItemAlpDx[index - 1] - offsetX;
+            }
+        }
+        else
+        {
+            // nothing to put on the second line
+            *out2Len = 0;
+            *out2Width = 0;
+        }
+    }
+    else
+    {
+        // the first line will contain everything
+        *out1Len = min(*out1Len, textLen);
+        *out1Width = sz.cx;
+        wmemmove(out1, text, *out1Len);
+
+        // the second line will be empty
+        *out2Len = 0;
+        *out2Width = 0;
+    }
+    // maximum width
+    *maxWidth = max(*out1Width, *out2Width);
+}
+
 //****************************************************************************
 //
 // DrawIconThumbnailItem
@@ -1492,20 +1628,43 @@ void CFilesWindow::DrawIconThumbnailItem(HDC hTgtDC, int itemIndex, RECT* itemRe
         int nameLen = f->NameLen;
         int itemWidth = rect.right - rect.left; // item width
 
-        // format the name to the user-defined form
-        AlterFileName(TransferBuffer, f->Name, -1, Configuration.FileNameFormat, 0, isDir);
+        // Check if we need wide string display for Unicode filenames
+        BOOL useWideDisplay = (f->NameW != NULL);
+        int nameLenW = 0;
+        if (useWideDisplay)
+            nameLenW = (int)wcslen(f->NameW);
 
         // maximum width available for the text
         int maxWidth = itemWidth - 4 - 1; // -1 so they don't touch
-        char* out1 = DrawItemBuff;
         int out1Len = 512;
         int out1Width;
-        char* out2 = DrawItemBuff + 512;
         int out2Len = 512;
         int out2Width;
-        SplitText(hDC, TransferBuffer, nameLen, &maxWidth,
-                  out1, &out1Len, &out1Width,
-                  out2, &out2Len, &out2Width);
+
+        // Wide string buffers for Unicode display
+        wchar_t* out1W = DrawItemBuffW;
+        wchar_t* out2W = DrawItemBuffW + 512;
+
+        // ANSI string buffers for regular display
+        char* out1 = DrawItemBuff;
+        char* out2 = DrawItemBuff + 512;
+
+        if (useWideDisplay)
+        {
+            // Use wide string processing for Unicode filenames
+            SplitTextW(hDC, f->NameW, nameLenW, &maxWidth,
+                       out1W, &out1Len, &out1Width,
+                       out2W, &out2Len, &out2Width);
+        }
+        else
+        {
+            // format the name to the user-defined form
+            AlterFileName(TransferBuffer, f->Name, -1, Configuration.FileNameFormat, 0, isDir);
+
+            SplitText(hDC, TransferBuffer, nameLen, &maxWidth,
+                      out1, &out1Len, &out1Width,
+                      out2, &out2Len, &out2Width);
+        }
 
         if (isItemUpDir)
         {
@@ -1551,15 +1710,31 @@ void CFilesWindow::DrawIconThumbnailItem(HDC hTgtDC, int itemIndex, RECT* itemRe
 
         // display the centered first line; also clear background of the second line
         // DRAWFLAG_MASK: hack, under XP some stuff is added in font of the text in the mask while drawing short texts; not an issue if text is not drawn
-        ExtTextOut(hDC, rect.left + (itemWidth - out1Width) / 2, y,
-                   ETO_OPAQUE, &r, out1, (drawFlags & DRAWFLAG_MASK) ? 0 : out1Len, NULL);
+        if (useWideDisplay)
+        {
+            ExtTextOutW(hDC, rect.left + (itemWidth - out1Width) / 2, y,
+                        ETO_OPAQUE, &r, out1W, (drawFlags & DRAWFLAG_MASK) ? 0 : out1Len, NULL);
+        }
+        else
+        {
+            ExtTextOut(hDC, rect.left + (itemWidth - out1Width) / 2, y,
+                       ETO_OPAQUE, &r, out1, (drawFlags & DRAWFLAG_MASK) ? 0 : out1Len, NULL);
+        }
 
         // display the centered second line
         if (out2Len > 0)
         {
             // DRAWFLAG_MASK: hack, under XP some stuff is added in font of the text in the mask while drawing short texts; not an issue if text is not drawn
-            ExtTextOut(hDC, rect.left + (itemWidth - out2Width) / 2, y += FontCharHeight,
-                       0, NULL, out2, (drawFlags & DRAWFLAG_MASK) ? 0 : out2Len, NULL);
+            if (useWideDisplay)
+            {
+                ExtTextOutW(hDC, rect.left + (itemWidth - out2Width) / 2, y += FontCharHeight,
+                            0, NULL, out2W, (drawFlags & DRAWFLAG_MASK) ? 0 : out2Len, NULL);
+            }
+            else
+            {
+                ExtTextOut(hDC, rect.left + (itemWidth - out2Width) / 2, y += FontCharHeight,
+                           0, NULL, out2, (drawFlags & DRAWFLAG_MASK) ? 0 : out2Len, NULL);
+            }
         }
 
         //*****************************************
@@ -1612,6 +1787,43 @@ void TruncateSringToFitWidth(HDC hDC, char* buffer, int* bufferLen, int maxTextW
         else
         {
             buffer[1] = '.';
+            *bufferLen = 2;
+        }
+    }
+    else
+    {
+        if (*widthNeeded < fnSZ.cx)
+            *widthNeeded = fnSZ.cx;
+    }
+}
+
+// Wide version for Unicode filenames
+void TruncateSringToFitWidthW(HDC hDC, wchar_t* buffer, int* bufferLen, int maxTextWidth, int* widthNeeded)
+{
+    if (*bufferLen == 0)
+        return;
+
+    SIZE fnSZ;
+    int fitChars;
+    GetTextExtentExPointW(hDC, buffer, *bufferLen, maxTextWidth,
+                          &fitChars, DrawItemAlpDx, &fnSZ);
+    if (fitChars < *bufferLen)
+    {
+        if (*widthNeeded < maxTextWidth)
+            *widthNeeded = maxTextWidth;
+        // search from the end for the character after which we can copy "..." and it fits in the column
+        while (fitChars > 0 && DrawItemAlpDx[fitChars - 1] + TextEllipsisWidth > maxTextWidth)
+            fitChars--;
+        // copy part of the original string to another buffer
+        if (fitChars > 0)
+        {
+            // and append "..."
+            wmemmove(buffer + fitChars, L"...", 3);
+            *bufferLen = fitChars + 3;
+        }
+        else
+        {
+            buffer[1] = L'.';
             *bufferLen = 2;
         }
     }
@@ -1871,23 +2083,45 @@ void CFilesWindow::DrawTileItem(HDC hTgtDC, int itemIndex, RECT* itemRect, DWORD
         int nameLen = f->NameLen;
         int itemWidth = rect.right - rect.left; // item width
 
+        // Check if we need wide string display for Unicode filenames
+        BOOL useWideDisplay = (f->NameW != NULL);
+
         // texts must not exceed this length in pixels
         int maxTextWidth = itemWidth - TILE_LEFT_MARGIN - IconSizes[iconSize] - TILE_LEFT_MARGIN - 4;
         int widthNeeded = 0;
 
         char* out0 = TransferBuffer;
         int out0Len;
+        wchar_t* out0W = DrawItemBuffW;  // Wide buffer for Unicode filename
+        int out0LenW = 0;
         char* out1 = DrawItemBuff;
         int out1Len;
         char* out2 = DrawItemBuff + 512;
         int out2Len;
-        GetTileTexts(f, isDir ? (isItemUpDir ? 2 /* UP-DIR */ : 1) : 0, hDC, maxTextWidth, &widthNeeded,
-                     out0, &out0Len, out1, &out1Len, out2, &out2Len,
-                     ValidFileData, &PluginData, Is(ptDisk));
+
+        if (useWideDisplay)
+        {
+            // Handle Unicode filename separately
+            out0LenW = (int)wcslen(f->NameW);
+            wmemcpy(out0W, f->NameW, out0LenW + 1);
+            TruncateSringToFitWidthW(hDC, out0W, &out0LenW, maxTextWidth, &widthNeeded);
+
+            // Still call GetTileTexts for size and date/time (out1, out2), but skip filename
+            GetTileTexts(f, isDir ? (isItemUpDir ? 2 /* UP-DIR */ : 1) : 0, hDC, maxTextWidth, &widthNeeded,
+                         out0, &out0Len, out1, &out1Len, out2, &out2Len,
+                         ValidFileData, &PluginData, Is(ptDisk));
+        }
+        else
+        {
+            GetTileTexts(f, isDir ? (isItemUpDir ? 2 /* UP-DIR */ : 1) : 0, hDC, maxTextWidth, &widthNeeded,
+                         out0, &out0Len, out1, &out1Len, out2, &out2Len,
+                         ValidFileData, &PluginData, Is(ptDisk));
+        }
 
         if (isItemUpDir)
         {
             out0Len = 0;
+            out0LenW = 0;
         }
 
         // outer rectangle from which I clear towards the inner one
@@ -1939,7 +2173,14 @@ void CFilesWindow::DrawTileItem(HDC hTgtDC, int itemIndex, RECT* itemRect, DWORD
                 r.bottom--;
         }
         // DRAWFLAG_MASK: hack, under XP some stuff is added in font of the text in the mask while drawing short texts; not an issue if text is not drawn
-        ExtTextOut(hDC, textX, textY, ETO_OPAQUE, &r, out0, (drawFlags & DRAWFLAG_MASK) ? 0 : out0Len, NULL);
+        if (useWideDisplay)
+        {
+            ExtTextOutW(hDC, textX, textY, ETO_OPAQUE, &r, out0W, (drawFlags & DRAWFLAG_MASK) ? 0 : out0LenW, NULL);
+        }
+        else
+        {
+            ExtTextOut(hDC, textX, textY, ETO_OPAQUE, &r, out0, (drawFlags & DRAWFLAG_MASK) ? 0 : out0Len, NULL);
+        }
 
         // display the second line
         if (out1[0] != 0)
