@@ -23,6 +23,45 @@
 
 #include <string>
 
+// RAII string conversion helpers - use for local temporaries
+inline std::string WideToLocal(const wchar_t* src, int srcLen = -1)
+{
+    if (!src || (srcLen == 0))
+        return std::string();
+    int len = WideCharToMultiByte(CP_ACP, 0, src, srcLen, nullptr, 0, nullptr, nullptr);
+    if (len <= 0)
+        return std::string();
+    std::string result(len, '\0');
+    WideCharToMultiByte(CP_ACP, 0, src, srcLen, &result[0], len, nullptr, nullptr);
+    if (srcLen == -1 && !result.empty() && result.back() == '\0')
+        result.pop_back(); // remove null terminator counted by -1
+    return result;
+}
+
+inline std::string WideToLocal(const std::wstring& src)
+{
+    return WideToLocal(src.c_str(), static_cast<int>(src.size()));
+}
+
+inline std::wstring LocalToWide(const char* src, int srcLen = -1)
+{
+    if (!src || (srcLen == 0))
+        return std::wstring();
+    int len = MultiByteToWideChar(CP_ACP, 0, src, srcLen, nullptr, 0);
+    if (len <= 0)
+        return std::wstring();
+    std::wstring result(len, L'\0');
+    MultiByteToWideChar(CP_ACP, 0, src, srcLen, &result[0], len);
+    if (srcLen == -1 && !result.empty() && result.back() == L'\0')
+        result.pop_back(); // remove null terminator counted by -1
+    return result;
+}
+
+inline std::wstring LocalToWide(const std::string& src)
+{
+    return LocalToWide(src.c_str(), static_cast<int>(src.size()));
+}
+
 // in the plugin you need to define variable SalamanderVersion (int) and initialize it
 // in SalamanderPluginEntry:
 // SalamanderVersion = salamander->GetVersion();

@@ -140,13 +140,9 @@ BOOL RegOperationError(int lastError, int error, int title, int keyRoot, LPWSTR 
     int l = (int)strlen(strcpy(buf, LoadStr(error)));
     SG->GetErrorText(lastError, buf + l, 1024 - l);
 
-    char fullName[MAX_FULL_KEYNAME]; // buffer for the full REG name shown in an error dialog
-    l = WStrToStr(fullName, MAX_FULL_KEYNAME, PredefinedHKeys[keyRoot].KeyName) - 1;
-    fullName[l++] = '\\';
-    l += WStrToStr(fullName + l, MAX_FULL_KEYNAME - l, keyName) - 1;
-    fullName[l] = 0; // just in case
+    std::string fullName = WideToLocal(PredefinedHKeys[keyRoot].KeyName) + "\\" + WideToLocal(keyName);
 
-    int res = skip ? SG->DialogError(GetParent(), BUTTONS_RETRYSKIPCANCEL, fullName, buf, LoadStr(title)) : SG->DialogError(GetParent(), BUTTONS_RETRYCANCEL, fullName, buf, LoadStr(title));
+    int res = skip ? SG->DialogError(GetParent(), BUTTONS_RETRYSKIPCANCEL, fullName.c_str(), buf, LoadStr(title)) : SG->DialogError(GetParent(), BUTTONS_RETRYCANCEL, fullName.c_str(), buf, LoadStr(title));
     switch (res)
     {
     case DIALOG_RETRY:
