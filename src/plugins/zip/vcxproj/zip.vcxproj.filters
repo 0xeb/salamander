@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="cpp">
@@ -87,7 +87,7 @@
     <ClCompile Include="..\repair.cpp">
       <Filter>cpp</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\shared\lukas\resedit.cpp">
+    <ClCompile Include="..\..\shared\plugcore\resedit.cpp">
       <Filter>cpp</Filter>
     </ClCompile>
     <ClCompile Include="..\trees.cpp">
@@ -107,7 +107,7 @@
     <ClInclude Include="..\add_del.h">
       <Filter>h</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\shared\lukas\array2.h">
+    <ClInclude Include="..\..\shared\plugcore\array2.h">
       <Filter>h</Filter>
     </ClInclude>
     <ClInclude Include="..\chicon.h">
@@ -164,7 +164,7 @@
     <ClInclude Include="..\repair.h">
       <Filter>h</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\shared\lukas\resedit.h">
+    <ClInclude Include="..\..\shared\plugcore\resedit.h">
       <Filter>h</Filter>
     </ClInclude>
     <ClInclude Include="..\sfxmake\sfxmake.h">

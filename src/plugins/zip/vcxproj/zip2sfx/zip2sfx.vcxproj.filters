@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="cpp">
@@ -33,7 +33,7 @@
     <ClCompile Include="..\..\zip2sfx\precomp.cpp">
       <Filter>cpp</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\shared\lukas\resedit.cpp">
+    <ClCompile Include="..\..\..\shared\plugcore\resedit.cpp">
       <Filter>cpp</Filter>
     </ClCompile>
     <ClCompile Include="..\..\zip2sfx\zip2sfx.cpp">
@@ -62,7 +62,7 @@
     <ClInclude Include="..\..\zip2sfx\precomp.h">
       <Filter>h</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\shared\lukas\resedit.h">
+    <ClInclude Include="..\..\..\shared\plugcore\resedit.h">
       <Filter>h</Filter>
     </ClInclude>
     <ClInclude Include="..\..\zip2sfx\texts.h">

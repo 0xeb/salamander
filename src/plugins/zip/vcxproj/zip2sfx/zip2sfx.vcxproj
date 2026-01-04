@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -65,7 +65,7 @@
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\shared\lukas\resedit.cpp">
+    <ClCompile Include="..\..\..\shared\plugcore\resedit.cpp">
     </ClCompile>
     <ClCompile Include="..\..\chicon.cpp">
     </ClCompile>
@@ -87,7 +87,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\..\shared\lukas\resedit.h">
+    <ClInclude Include="..\..\..\shared\plugcore\resedit.h">
     </ClInclude>
     <ClInclude Include="..\..\chicon.h">
     </ClInclude>

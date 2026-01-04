@@ -157,11 +157,11 @@ sal_add_plugin(NAME renamer
     "${SAL_PLUGINS}/renamer/rendlg4.cpp"
     "${SAL_PLUGINS}/renamer/utils.cpp"
     "${SAL_PLUGINS}/renamer/varstr.cpp"
-    # Character utilities from shared/lukas
-    "${SAL_SHARED}/lukas/str.cpp"
+    # Character utilities from shared/plugcore
+    "${SAL_SHARED}/plugcore/str.cpp"
   RC "${SAL_PLUGINS}/renamer/renamer.rc"
   DEF "${SAL_PLUGINS}/renamer/renamer.def"
-  INCLUDES "${SAL_SHARED}/lukas"
+  INCLUDES "${SAL_SHARED}/plugcore"
   DEFINES _CHAR_UNSIGNED DECLARE_REGIFACE_FUNCTIONS
 )
 
@@ -199,7 +199,7 @@ sal_add_plugin(NAME uncab
     "${SAL_PLUGINS}/uncab/uncab.cpp"
   RC "${SAL_PLUGINS}/uncab/uncab.rc"
   DEF "${SAL_PLUGINS}/uncab/uncab.def"
-  INCLUDES "${SAL_SHARED}/lukas"
+  INCLUDES "${SAL_SHARED}/plugcore"
   LIBS cabinet
 )
 
@@ -240,7 +240,7 @@ sal_add_plugin(NAME unarj
     "${SAL_PLUGINS}/unarj/unarjspl.cpp"
   RC "${SAL_PLUGINS}/unarj/unarj.rc"
   DEF "${SAL_PLUGINS}/unarj/unarj.def"
-  INCLUDES "${SAL_SHARED}/lukas"
+  INCLUDES "${SAL_SHARED}/plugcore"
 )
 
 message(STATUS "Configured plugins with PCH support")

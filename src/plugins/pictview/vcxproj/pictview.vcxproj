@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -125,7 +125,7 @@
     </ClCompile>
     <ClCompile Include="..\..\shared\dbg.cpp">
     </ClCompile>
-    <ClCompile Include="..\..\shared\lukas\gdi.cpp">
+    <ClCompile Include="..\..\shared\plugcore\gdi.cpp">
     </ClCompile>
     <ClCompile Include="..\..\shared\winliblt.cpp">
     </ClCompile>
@@ -175,7 +175,7 @@
     </ClInclude>
     <ClInclude Include="..\..\shared\dbg.h">
     </ClInclude>
-    <ClInclude Include="..\..\shared\lukas\gdi.h">
+    <ClInclude Include="..\..\shared\plugcore\gdi.h">
     </ClInclude>
     <ClInclude Include="..\..\shared\spl_arc.h">
     </ClInclude>

@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="cpp">
@@ -17,7 +17,7 @@
       <UniqueIdentifier>{ad5d44ff-421d-4a37-a09d-b6270e4f472d}</UniqueIdentifier>
       <Extensions>cpp;h</Extensions>
     </Filter>
-    <Filter Include="lukas-shared">
+    <Filter Include="plugcore">
       <UniqueIdentifier>{50934dc8-2cc7-44b7-bfe5-e1594689efd0}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
@@ -103,17 +103,17 @@
     <ClCompile Include="..\..\shared\winliblt.cpp">
       <Filter>common</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\shared\lukas\messages.cpp">
-      <Filter>lukas-shared</Filter>
+    <ClCompile Include="..\..\shared\plugcore\messages.cpp">
+      <Filter>plugcore</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\shared\lukas\str.cpp">
-      <Filter>lukas-shared</Filter>
+    <ClCompile Include="..\..\shared\plugcore\str.cpp">
+      <Filter>plugcore</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\shared\lukas\utilaux.cpp">
-      <Filter>lukas-shared</Filter>
+    <ClCompile Include="..\..\shared\plugcore\utilaux.cpp">
+      <Filter>plugcore</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\shared\lukas\utilbase.cpp">
-      <Filter>lukas-shared</Filter>
+    <ClCompile Include="..\..\shared\plugcore\utilbase.cpp">
+      <Filter>plugcore</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -204,17 +204,17 @@
     <ClInclude Include="..\..\shared\winliblt.h">
       <Filter>common</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\shared\lukas\diff.h">
-      <Filter>lukas-shared</Filter>
+    <ClInclude Include="..\..\shared\plugcore\diff.h">
+      <Filter>plugcore</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\shared\lukas\lcutils.h">
-      <Filter>lukas-shared</Filter>
+    <ClInclude Include="..\..\shared\plugcore\lcutils.h">
+      <Filter>plugcore</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\shared\lukas\messages.h">
-      <Filter>lukas-shared</Filter>
+    <ClInclude Include="..\..\shared\plugcore\messages.h">
+      <Filter>plugcore</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\shared\lukas\str.h">
-      <Filter>lukas-shared</Filter>
+    <ClInclude Include="..\..\shared\plugcore\str.h">
+      <Filter>plugcore</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

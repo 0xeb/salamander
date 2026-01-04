@@ -50,7 +50,7 @@
 #include "arraylt.h"
 #include "winliblt.h"
 #include "auxtools.h"
-#include "lukas\gdi.h"
+#include "plugcore\gdi.h"
 
 // When we have an old version of windowsx.h
 #ifndef GET_Y_LPARAM

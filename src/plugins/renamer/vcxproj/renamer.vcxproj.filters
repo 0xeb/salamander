@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="cpp">
@@ -17,7 +17,7 @@
       <UniqueIdentifier>{89c22e90-3aa8-4189-9490-c3f647dff7cf}</UniqueIdentifier>
       <Extensions>cpp;h</Extensions>
     </Filter>
-    <Filter Include="lukas-shared">
+    <Filter Include="plugcore">
       <UniqueIdentifier>{9090f98a-124a-4390-b450-a884ed6241ff}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
@@ -76,8 +76,8 @@
     <ClCompile Include="..\..\shared\winliblt.cpp">
       <Filter>common</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\shared\lukas\str.cpp">
-      <Filter>lukas-shared</Filter>
+    <ClCompile Include="..\..\shared\plugcore\str.cpp">
+      <Filter>plugcore</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -144,8 +144,8 @@
     <ClInclude Include="..\..\shared\winliblt.h">
       <Filter>common</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\shared\lukas\str.h">
-      <Filter>lukas-shared</Filter>
+    <ClInclude Include="..\..\shared\plugcore\str.h">
+      <Filter>plugcore</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -139,9 +139,9 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\shared\lukas\array2.h">
+    <ClInclude Include="..\..\shared\plugcore\array2.h">
     </ClInclude>
-    <ClInclude Include="..\..\shared\lukas\dumpmem.h">
+    <ClInclude Include="..\..\shared\plugcore\dumpmem.h">
     </ClInclude>
     <ClInclude Include="..\..\shared\spl_arc.h">
     </ClInclude>

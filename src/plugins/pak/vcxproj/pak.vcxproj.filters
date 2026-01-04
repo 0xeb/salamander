@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="cpp">
@@ -44,10 +44,10 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\shared\lukas\array2.h">
+    <ClInclude Include="..\..\shared\plugcore\array2.h">
       <Filter>h</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\shared\lukas\dumpmem.h">
+    <ClInclude Include="..\..\shared\plugcore\dumpmem.h">
       <Filter>h</Filter>
     </ClInclude>
     <ClInclude Include="..\spl\pak.h">
