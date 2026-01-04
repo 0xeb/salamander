@@ -94,5 +94,10 @@ set(SAL_COMMON_LIBS
   comctl32
 )
 
+# x86 compiler flags (match VS x86.props: EnableEnhancedInstructionSet=SSE2)
+if(MSVC AND SAL_PLATFORM STREQUAL "x86")
+  add_compile_options(/arch:SSE2)
+endif()
+
 message(STATUS "Salamander root: ${SAL_ROOT}")
 message(STATUS "Salamander output: ${SAL_OUTPUT_BASE}")
