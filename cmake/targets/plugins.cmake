@@ -203,4 +203,44 @@ sal_add_plugin(NAME uncab
   LIBS cabinet
 )
 
+# -----------------------------------------------------------------------------
+# unchm - CHM (Compiled HTML Help) archive extractor
+# -----------------------------------------------------------------------------
+sal_add_plugin(NAME unchm
+  SOURCES
+    "${SAL_PLUGINS}/unchm/chmfile.cpp"
+    "${SAL_PLUGINS}/unchm/precomp.cpp"
+    "${SAL_PLUGINS}/unchm/unchm.cpp"
+  RC "${SAL_PLUGINS}/unchm/unchm.rc"
+  DEF "${SAL_PLUGINS}/unchm/unchm.def"
+)
+
+# -----------------------------------------------------------------------------
+# unmime - MIME/email attachment extractor
+# -----------------------------------------------------------------------------
+sal_add_plugin(NAME unmime
+  SOURCES
+    "${SAL_PLUGINS}/unmime/decoder.cpp"
+    "${SAL_PLUGINS}/unmime/parser.cpp"
+    "${SAL_PLUGINS}/unmime/precomp.cpp"
+    "${SAL_PLUGINS}/unmime/unmime.cpp"
+  RC "${SAL_PLUGINS}/unmime/unmime.rc"
+  DEF "${SAL_PLUGINS}/unmime/unmime.def"
+)
+
+# -----------------------------------------------------------------------------
+# unarj - ARJ archive extractor
+# -----------------------------------------------------------------------------
+sal_add_plugin(NAME unarj
+  SOURCES
+    "${SAL_PLUGINS}/unarj/decode.cpp"
+    "${SAL_PLUGINS}/unarj/dialogs.cpp"
+    "${SAL_PLUGINS}/unarj/precomp.cpp"
+    "${SAL_PLUGINS}/unarj/unarj.cpp"
+    "${SAL_PLUGINS}/unarj/unarjspl.cpp"
+  RC "${SAL_PLUGINS}/unarj/unarj.rc"
+  DEF "${SAL_PLUGINS}/unarj/unarj.def"
+  INCLUDES "${SAL_SHARED}/lukas"
+)
+
 message(STATUS "Configured plugins with PCH support")
