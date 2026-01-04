@@ -76,7 +76,7 @@ target_compile_definitions(salamander PRIVATE
 )
 
 target_link_libraries(salamander PRIVATE
-  htmlhelp comctl32 mpr wsock32 netapi32 msimg32 shlwapi
+  htmlhelp comctl32 mpr ws2_32 netapi32 msimg32 shlwapi
   ${SAL_COMMON_LIBS}
 )
 
@@ -88,6 +88,7 @@ if(MSVC)
   target_link_options(salamander PRIVATE
     /SUBSYSTEM:WINDOWS
     /STACK:3145728
+    /MANIFEST:NO
   )
 elseif(MINGW)
   target_link_options(salamander PRIVATE
@@ -96,9 +97,12 @@ elseif(MINGW)
   )
 endif()
 
+# Match VS output name (salamand.exe instead of salamander.exe)
+set_target_properties(salamander PROPERTIES OUTPUT_NAME "salamand")
+
 # Resource file settings
 set_source_files_properties(${SALAMANDER_RC} PROPERTIES
-  COMPILE_DEFINITIONS "WINVER=0x0601"
+  COMPILE_DEFINITIONS "WINVER=0x0601;$<$<CONFIG:Debug>:_DEBUG>;$<$<CONFIG:Release>:NDEBUG>;$<$<EQUAL:${CMAKE_SIZEOF_VOID_P},8>:_WIN64>"
 )
 
 # bzip2 C sources need BZ_NO_STDIO
@@ -147,7 +151,7 @@ set_target_properties(salamander PROPERTIES
 
 # RC files need defines set via source properties, not target_compile_definitions
 set_source_files_properties("${SAL_SRC}/lang/lang.rc" PROPERTIES
-  COMPILE_DEFINITIONS "_LANG;_LANG_SALAMANDER;WINVER=0x0601"
+  COMPILE_DEFINITIONS "_LANG;_LANG_SALAMANDER;WINVER=0x0601;$<$<CONFIG:Debug>:_DEBUG>;$<$<CONFIG:Release>:NDEBUG>;$<$<EQUAL:${CMAKE_SIZEOF_VOID_P},8>:_WIN64>"
 )
 
 add_library(sal_lang_english SHARED "${SAL_SRC}/lang/lang.rc")
@@ -158,7 +162,10 @@ target_include_directories(sal_lang_english PRIVATE
 )
 
 if(MSVC)
-  target_link_options(sal_lang_english PRIVATE /NOENTRY)
+  target_link_options(sal_lang_english PRIVATE
+    /NOENTRY /MANIFEST:NO
+    $<$<CONFIG:Release>:/LTCG:OFF>  # No code to optimize in resource-only DLL
+  )
 elseif(MINGW)
   # Resource-only DLL: use minimal entry stub
   target_sources(sal_lang_english PRIVATE "${SAL_SRC}/common/dllstub.c")
@@ -220,11 +227,11 @@ target_compile_definitions(salmon PRIVATE
 )
 
 target_link_libraries(salmon PRIVATE
-  comctl32 shlwapi wininet dbghelp wsock32
+  comctl32 shlwapi wininet ws2_32
 )
 
 if(MSVC)
-  target_link_options(salmon PRIVATE /SUBSYSTEM:WINDOWS)
+  target_link_options(salmon PRIVATE /SUBSYSTEM:WINDOWS /MANIFEST:NO)
 elseif(MINGW)
   target_link_options(salmon PRIVATE -Wl,--subsystem,windows)
 endif()
@@ -266,6 +273,9 @@ sal_install_plugins()
 
 # Resource files
 sal_install_resources()
+
+# Plugin auto-discovery file (not needed - AutoInstallStdPluginsDir scans plugins folder)
+# sal_generate_plugins_ver()
 
 # ==============================================================================
 # Populate Target (install to build output)

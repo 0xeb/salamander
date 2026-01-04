@@ -157,11 +157,11 @@ sal_add_plugin(NAME renamer
     "${SAL_PLUGINS}/renamer/rendlg4.cpp"
     "${SAL_PLUGINS}/renamer/utils.cpp"
     "${SAL_PLUGINS}/renamer/varstr.cpp"
-    # Character utilities from shared/lukas
-    "${SAL_SHARED}/lukas/str.cpp"
+    # Character utilities from shared/plugcore
+    "${SAL_SHARED}/plugcore/str.cpp"
   RC "${SAL_PLUGINS}/renamer/renamer.rc"
   DEF "${SAL_PLUGINS}/renamer/renamer.def"
-  INCLUDES "${SAL_SHARED}/lukas"
+  INCLUDES "${SAL_SHARED}/plugcore"
   DEFINES _CHAR_UNSIGNED DECLARE_REGIFACE_FUNCTIONS
 )
 
@@ -187,6 +187,60 @@ sal_add_plugin(NAME unole
     "${SAL_PLUGINS}/unole/unole2.cpp"
   RC "${SAL_PLUGINS}/unole/unole2.rc"
   DEF "${SAL_PLUGINS}/unole/unole.def"
+)
+
+# -----------------------------------------------------------------------------
+# uncab - Windows Cabinet (.cab) archive extractor
+# -----------------------------------------------------------------------------
+sal_add_plugin(NAME uncab
+  SOURCES
+    "${SAL_PLUGINS}/uncab/dialogs.cpp"
+    "${SAL_PLUGINS}/uncab/precomp.cpp"
+    "${SAL_PLUGINS}/uncab/uncab.cpp"
+  RC "${SAL_PLUGINS}/uncab/uncab.rc"
+  DEF "${SAL_PLUGINS}/uncab/uncab.def"
+  INCLUDES "${SAL_SHARED}/plugcore"
+  LIBS cabinet
+)
+
+# -----------------------------------------------------------------------------
+# unchm - CHM (Compiled HTML Help) archive extractor
+# -----------------------------------------------------------------------------
+sal_add_plugin(NAME unchm
+  SOURCES
+    "${SAL_PLUGINS}/unchm/chmfile.cpp"
+    "${SAL_PLUGINS}/unchm/precomp.cpp"
+    "${SAL_PLUGINS}/unchm/unchm.cpp"
+  RC "${SAL_PLUGINS}/unchm/unchm.rc"
+  DEF "${SAL_PLUGINS}/unchm/unchm.def"
+)
+
+# -----------------------------------------------------------------------------
+# unmime - MIME/email attachment extractor
+# -----------------------------------------------------------------------------
+sal_add_plugin(NAME unmime
+  SOURCES
+    "${SAL_PLUGINS}/unmime/decoder.cpp"
+    "${SAL_PLUGINS}/unmime/parser.cpp"
+    "${SAL_PLUGINS}/unmime/precomp.cpp"
+    "${SAL_PLUGINS}/unmime/unmime.cpp"
+  RC "${SAL_PLUGINS}/unmime/unmime.rc"
+  DEF "${SAL_PLUGINS}/unmime/unmime.def"
+)
+
+# -----------------------------------------------------------------------------
+# unarj - ARJ archive extractor
+# -----------------------------------------------------------------------------
+sal_add_plugin(NAME unarj
+  SOURCES
+    "${SAL_PLUGINS}/unarj/decode.cpp"
+    "${SAL_PLUGINS}/unarj/dialogs.cpp"
+    "${SAL_PLUGINS}/unarj/precomp.cpp"
+    "${SAL_PLUGINS}/unarj/unarj.cpp"
+    "${SAL_PLUGINS}/unarj/unarjspl.cpp"
+  RC "${SAL_PLUGINS}/unarj/unarj.rc"
+  DEF "${SAL_PLUGINS}/unarj/unarj.def"
+  INCLUDES "${SAL_SHARED}/plugcore"
 )
 
 message(STATUS "Configured plugins with PCH support")

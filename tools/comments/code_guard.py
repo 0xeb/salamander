@@ -107,7 +107,7 @@ def get_clang_args(repo_path: Path) -> list:
         'src/plugins/7zip/7za/cpp/Common',
         'src/plugins/7zip/7za/cpp',
         'src/plugins/automation/generated',
-        'src/plugins/shared/lukas',
+        'src/plugins/shared/plugcore',
         'src/plugins/ftp',
         'src/plugins/ftp/openssl',
         'src/plugins/ieviewer/cmark-gfm/build/src',

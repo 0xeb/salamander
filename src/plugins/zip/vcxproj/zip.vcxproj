@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -123,7 +123,7 @@
   <ItemGroup>
     <ClCompile Include="..\..\shared\dbg.cpp">
     </ClCompile>
-    <ClCompile Include="..\..\shared\lukas\resedit.cpp">
+    <ClCompile Include="..\..\shared\plugcore\resedit.cpp">
     </ClCompile>
     <ClCompile Include="..\add.cpp">
     </ClCompile>
@@ -187,9 +187,9 @@
   <ItemGroup>
     <ClInclude Include="..\..\shared\dbg.h">
     </ClInclude>
-    <ClInclude Include="..\..\shared\lukas\array2.h">
+    <ClInclude Include="..\..\shared\plugcore\array2.h">
     </ClInclude>
-    <ClInclude Include="..\..\shared\lukas\resedit.h">
+    <ClInclude Include="..\..\shared\plugcore\resedit.h">
     </ClInclude>
     <ClInclude Include="..\..\shared\spl_arc.h">
     </ClInclude>

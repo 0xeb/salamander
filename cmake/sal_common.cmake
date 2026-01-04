@@ -12,7 +12,7 @@ if(CMAKE_CROSSCOMPILING)
   message(STATUS "Cross-compiling for Windows with ${CMAKE_CXX_COMPILER_ID}")
 endif()
 
-# Platform short name (matches VS build: Win32, x64, or ARM64)
+# Platform short name (matches VS build: x86, x64, or ARM64)
 # For cross-compilation, use CMAKE_SYSTEM_PROCESSOR since sizeof(void*) is host size
 # For native VS builds, check CMAKE_GENERATOR_PLATFORM (set by -A flag or preset)
 if(CMAKE_CROSSCOMPILING)
@@ -21,7 +21,7 @@ if(CMAKE_CROSSCOMPILING)
   elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "ARM64|aarch64|arm64")
     set(SAL_PLATFORM "ARM64")
   else()
-    set(SAL_PLATFORM "Win32")
+    set(SAL_PLATFORM "x86")
   endif()
 elseif(CMAKE_GENERATOR_PLATFORM MATCHES "ARM64")
   # Native ARM64 build (Visual Studio with -A ARM64)
@@ -29,7 +29,7 @@ elseif(CMAKE_GENERATOR_PLATFORM MATCHES "ARM64")
 elseif(CMAKE_SIZEOF_VOID_P EQUAL 8)
   set(SAL_PLATFORM "x64")
 else()
-  set(SAL_PLATFORM "Win32")
+  set(SAL_PLATFORM "x86")
 endif()
 
 # Output directory base
@@ -93,6 +93,18 @@ set(SAL_COMMON_INCLUDES
 set(SAL_COMMON_LIBS
   comctl32
 )
+
+# x86 compiler flags (match VS x86.props: EnableEnhancedInstructionSet=SSE2)
+if(MSVC AND SAL_PLATFORM STREQUAL "x86")
+  add_compile_options(/arch:SSE2)
+endif()
+
+# Release optimizations (match VS *_release.props)
+if(MSVC)
+  add_compile_options($<$<CONFIG:Release>:/GL>)  # Whole program optimization
+  add_compile_options($<$<CONFIG:Release>:/Gy>)  # Function-level linking
+  add_link_options($<$<CONFIG:Release>:/LTCG>)   # Link-time code generation
+endif()
 
 message(STATUS "Salamander root: ${SAL_ROOT}")
 message(STATUS "Salamander output: ${SAL_OUTPUT_BASE}")
