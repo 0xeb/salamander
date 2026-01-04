@@ -421,8 +421,8 @@ CAboutDialog::DialogProc(UINT uMsg, WPARAM wParam, LPARAM lParam)
         hl = new CHyperLink(HWindow, IDC_ABOUT_WWW);
         if (hl != NULL)
         {
-            const char* url = english ? "https://www.altap.cz" : "https://www.altap.cz/cz";
-            SetDlgItemText(HWindow, IDC_ABOUT_WWW, url + 8);
+            const char* url = "https://github.com/0xeb/salamander";
+            SetDlgItemText(HWindow, IDC_ABOUT_WWW, url + 8); // skip "https://"
             hl->SetActionOpen(url);
         }
 
