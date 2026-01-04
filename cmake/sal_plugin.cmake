@@ -42,7 +42,10 @@ function(sal_add_plugin_lang)
   )
 
   if(MSVC)
-    target_link_options(${TARGET_NAME} PRIVATE /NOENTRY)
+    target_link_options(${TARGET_NAME} PRIVATE
+      /NOENTRY
+      $<$<CONFIG:Release>:/LTCG:OFF>  # No code to optimize in resource-only DLL
+    )
   endif()
 
   set_target_properties(${TARGET_NAME} PROPERTIES

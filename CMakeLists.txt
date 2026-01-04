@@ -162,7 +162,10 @@ target_include_directories(sal_lang_english PRIVATE
 )
 
 if(MSVC)
-  target_link_options(sal_lang_english PRIVATE /NOENTRY /MANIFEST:NO)
+  target_link_options(sal_lang_english PRIVATE
+    /NOENTRY /MANIFEST:NO
+    $<$<CONFIG:Release>:/LTCG:OFF>  # No code to optimize in resource-only DLL
+  )
 elseif(MINGW)
   # Resource-only DLL: use minimal entry stub
   target_sources(sal_lang_english PRIVATE "${SAL_SRC}/common/dllstub.c")
