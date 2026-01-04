@@ -274,9 +274,6 @@ sal_install_plugins()
 # Resource files
 sal_install_resources()
 
-# Plugin auto-discovery file
-sal_generate_plugins_ver()
-
 # ==============================================================================
 # Populate Target (install to build output)
 # ==============================================================================
