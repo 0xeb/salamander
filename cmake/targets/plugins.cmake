@@ -243,4 +243,157 @@ sal_add_plugin(NAME unarj
   INCLUDES "${SAL_SHARED}/plugcore"
 )
 
+# -----------------------------------------------------------------------------
+# unfat - FAT filesystem recovery tool
+# -----------------------------------------------------------------------------
+sal_add_plugin(NAME unfat
+  SOURCES
+    "${SAL_PLUGINS}/unfat/fat.cpp"
+    "${SAL_PLUGINS}/unfat/precomp.cpp"
+    "${SAL_PLUGINS}/unfat/unfat.cpp"
+  RC "${SAL_PLUGINS}/unfat/unfat.rc"
+  DEF "${SAL_PLUGINS}/unfat/unfat.def"
+)
+
+# -----------------------------------------------------------------------------
+# automation - Scripting automation plugin (COM/ActiveScript)
+# -----------------------------------------------------------------------------
+sal_add_plugin(NAME automation
+  SOURCES
+    "${SAL_PLUGINS}/automation/abortmodal.cpp"
+    "${SAL_PLUGINS}/automation/abortpalette.cpp"
+    "${SAL_PLUGINS}/automation/automationplug.cpp"
+    "${SAL_PLUGINS}/automation/aututils.cpp"
+    "${SAL_PLUGINS}/automation/cfgdlg.cpp"
+    "${SAL_PLUGINS}/automation/dialogimpl.cpp"
+    "${SAL_PLUGINS}/automation/engassoc.cpp"
+    "${SAL_PLUGINS}/automation/entry.cpp"
+    "${SAL_PLUGINS}/automation/fileinfo.cpp"
+    "${SAL_PLUGINS}/automation/guibutton.cpp"
+    "${SAL_PLUGINS}/automation/guichkbox.cpp"
+    "${SAL_PLUGINS}/automation/guicomponent.cpp"
+    "${SAL_PLUGINS}/automation/guicontainer.cpp"
+    "${SAL_PLUGINS}/automation/guiform.cpp"
+    "${SAL_PLUGINS}/automation/guilabel.cpp"
+    "${SAL_PLUGINS}/automation/guinamespace.cpp"
+    "${SAL_PLUGINS}/automation/guitxtbox.cpp"
+    "${SAL_PLUGINS}/automation/itemaut.cpp"
+    "${SAL_PLUGINS}/automation/itemcoll.cpp"
+    "${SAL_PLUGINS}/automation/knownengines.cpp"
+    "${SAL_PLUGINS}/automation/panelaut.cpp"
+    "${SAL_PLUGINS}/automation/persistence.cpp"
+    "${SAL_PLUGINS}/automation/precomp.cpp"
+    "${SAL_PLUGINS}/automation/processlist.cpp"
+    "${SAL_PLUGINS}/automation/progressaut.cpp"
+    "${SAL_PLUGINS}/automation/raiserr.cpp"
+    "${SAL_PLUGINS}/automation/salamanderaut.cpp"
+    "${SAL_PLUGINS}/automation/saltypelib.cpp"
+    "${SAL_PLUGINS}/automation/scriptinfoaut.cpp"
+    "${SAL_PLUGINS}/automation/scriptlist.cpp"
+    "${SAL_PLUGINS}/automation/scriptsite.cpp"
+    "${SAL_PLUGINS}/automation/shim.cpp"
+    "${SAL_PLUGINS}/automation/strconv.cpp"
+    "${SAL_PLUGINS}/automation/waitwndaut.cpp"
+    "${SAL_PLUGINS}/automation/generated/salamander_i.c"
+  RC "${SAL_PLUGINS}/automation/automation.rc"
+  DEF "${SAL_PLUGINS}/automation/automation.def"
+  INCLUDES "${SAL_PLUGINS}/automation/generated"
+  LIBS comsuppw shlwapi comctl32 version
+)
+
+# Exclude the generated C file from precompiled headers
+set_source_files_properties(
+  "${SAL_PLUGINS}/automation/generated/salamander_i.c"
+  PROPERTIES SKIP_PRECOMPILE_HEADERS ON
+)
+
+# -----------------------------------------------------------------------------
+# filecomp - File comparison plugin with text diff viewer
+# -----------------------------------------------------------------------------
+sal_add_plugin(NAME filecomp
+  SOURCES
+    # Shared sources (filecomp doesn't use mhandles.cpp)
+    "${SAL_SHARED}/auxtools.cpp"
+    "${SAL_SHARED}/dbg.cpp"
+    "${SAL_SHARED}/winliblt.cpp"
+    "${SAL_SHARED}/plugcore/messages.cpp"
+    "${SAL_SHARED}/plugcore/str.cpp"
+    "${SAL_SHARED}/plugcore/utilaux.cpp"
+    "${SAL_SHARED}/plugcore/utilbase.cpp"
+    # Plugin sources
+    "${SAL_PLUGINS}/filecomp/controls.cpp"
+    "${SAL_PLUGINS}/filecomp/cwbase.cpp"
+    "${SAL_PLUGINS}/filecomp/cwoptim.cpp"
+    "${SAL_PLUGINS}/filecomp/cwstrict.cpp"
+    "${SAL_PLUGINS}/filecomp/dialogs.cpp"
+    "${SAL_PLUGINS}/filecomp/dialogs2.cpp"
+    "${SAL_PLUGINS}/filecomp/dialogs3.cpp"
+    "${SAL_PLUGINS}/filecomp/dialogs4.cpp"
+    "${SAL_PLUGINS}/filecomp/dlg_com.cpp"
+    "${SAL_PLUGINS}/filecomp/filecache.cpp"
+    "${SAL_PLUGINS}/filecomp/filecomp.cpp"
+    "${SAL_PLUGINS}/filecomp/filemap.cpp"
+    "${SAL_PLUGINS}/filecomp/mainwnd.cpp"
+    "${SAL_PLUGINS}/filecomp/mtxtout.cpp"
+    "${SAL_PLUGINS}/filecomp/precomp.cpp"
+    "${SAL_PLUGINS}/filecomp/remote.cpp"
+    "${SAL_PLUGINS}/filecomp/textio.cpp"
+    "${SAL_PLUGINS}/filecomp/viewtext.cpp"
+    "${SAL_PLUGINS}/filecomp/viewwnd.cpp"
+    "${SAL_PLUGINS}/filecomp/viewwnd2.cpp"
+    "${SAL_PLUGINS}/filecomp/viewwnd3.cpp"
+    "${SAL_PLUGINS}/filecomp/worker.cpp"
+    "${SAL_PLUGINS}/filecomp/worker2.cpp"
+    "${SAL_PLUGINS}/filecomp/xunicode.cpp"
+  RC "${SAL_PLUGINS}/filecomp/filecomp.rc"
+  DEF "${SAL_PLUGINS}/filecomp/filecomp.def"
+  INCLUDES "${SAL_SHARED}/plugcore"
+  DEFINES ENABLE_PROPERTYDIALOG
+  LIBS shlwapi
+  NO_SHARED
+)
+
+# -----------------------------------------------------------------------------
+# fcremote - Remote file comparison helper executable (minimal, no CRT)
+# -----------------------------------------------------------------------------
+add_executable(fcremote
+  "${SAL_SHARED}/plugcore/messages.cpp"
+  "${SAL_PLUGINS}/filecomp/fcremote/fcremote.cpp"
+  "${SAL_PLUGINS}/filecomp/fcremote/fcremote.rc"
+)
+
+target_include_directories(fcremote PRIVATE
+  "${SAL_PLUGINS}/filecomp/fcremote"
+  "${SAL_PLUGINS}/filecomp"
+  "${SAL_SHARED}/plugcore"
+  ${SAL_COMMON_INCLUDES}
+)
+
+target_compile_definitions(fcremote PRIVATE
+  WIN32 _WINDOWS
+  WINVER=0x0601 _WIN32_WINNT=0x0601 _WIN32_IE=0x0800
+  _CRT_SECURE_NO_WARNINGS _SCL_SECURE_NO_WARNINGS
+)
+
+if(MSVC)
+  # Minimal exe: static runtime, no exceptions, no buffer security
+  target_compile_options(fcremote PRIVATE /MP /W3 /MT /GS- /EHs-c-)
+  # No CRT, custom entry point
+  target_link_options(fcremote PRIVATE
+    /SUBSYSTEM:WINDOWS
+    /MANIFEST:NO
+    /NODEFAULTLIB
+    /ENTRY:WinMainCRTStartup
+  )
+  target_link_libraries(fcremote PRIVATE kernel32 user32)
+endif()
+
+set_target_properties(fcremote PROPERTIES
+  OUTPUT_NAME "fcremote"
+  RUNTIME_OUTPUT_DIRECTORY "${SAL_OUTPUT_BASE}/$<CONFIG>_${SAL_PLATFORM}/plugins/filecomp"
+)
+
+# Install fcremote with the filecomp plugin
+install(TARGETS fcremote RUNTIME DESTINATION "plugins/filecomp")
+
 message(STATUS "Configured plugins with PCH support")
