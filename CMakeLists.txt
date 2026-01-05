@@ -318,6 +318,9 @@ set_target_properties(salopen PROPERTIES
 
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/targets/plugins.cmake)
 
+# 7-Zip plugin with dependencies (7za.dll, 7zwrapper.dll)
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/targets/7zip.cmake)
+
 # ==============================================================================
 # Installation Rules
 # ==============================================================================
