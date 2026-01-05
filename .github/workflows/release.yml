@@ -122,5 +122,5 @@ jobs:
 
             ⚠️ This is a development build - please report issues!
           files: artifacts/**/*.zip
-          prerelease: true
-          make_latest: false
+          prerelease: false
+          make_latest: true
