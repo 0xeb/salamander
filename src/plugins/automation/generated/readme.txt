@@ -1,1 +1,1 @@
-V tomto adresari jsou jen automaticky generovane soubory.
+This directory contains only automatically generated files from salamander.idl via MIDL compiler.

@@ -286,6 +286,39 @@ sal_add_plugin(NAME unfat
 # -----------------------------------------------------------------------------
 # automation - Scripting automation plugin (COM/ActiveScript)
 # -----------------------------------------------------------------------------
+
+# MIDL compilation for COM interfaces
+set(AUTOMATION_IDL "${SAL_PLUGINS}/automation/salamander.idl")
+set(AUTOMATION_GEN "${SAL_PLUGINS}/automation/generated")
+set(AUTOMATION_MIDL_OUTPUTS
+  "${AUTOMATION_GEN}/salamander_h.h"
+  "${AUTOMATION_GEN}/salamander_i.c"
+  "${AUTOMATION_GEN}/salamander_p.c"
+  "${AUTOMATION_GEN}/dlldata.c"
+  "${AUTOMATION_GEN}/automation.tlb"
+)
+
+if(MSVC)
+  add_custom_command(
+    OUTPUT ${AUTOMATION_MIDL_OUTPUTS}
+    COMMAND midl
+      /nologo
+      /char signed
+      /env win32
+      /Oicf
+      /h "${AUTOMATION_GEN}/salamander_h.h"
+      /iid "${AUTOMATION_GEN}/salamander_i.c"
+      /proxy "${AUTOMATION_GEN}/salamander_p.c"
+      /dlldata "${AUTOMATION_GEN}/dlldata.c"
+      /tlb "${AUTOMATION_GEN}/automation.tlb"
+      "${AUTOMATION_IDL}"
+    DEPENDS "${AUTOMATION_IDL}"
+    WORKING_DIRECTORY "${SAL_PLUGINS}/automation"
+    COMMENT "Compiling IDL: salamander.idl"
+    VERBATIM
+  )
+endif()
+
 sal_add_plugin(NAME automation
   SOURCES
     "${SAL_PLUGINS}/automation/abortmodal.cpp"
@@ -423,6 +456,10 @@ set_target_properties(fcremote PROPERTIES
 
 # Install fcremote with the filecomp plugin
 install(TARGETS fcremote RUNTIME DESTINATION "plugins/filecomp")
+
+# Add fcremote as a dependency of populate target (it's not a plugin so not auto-added)
+# This must happen after sal_create_populate_target() is called in CMakeLists.txt
+set_property(GLOBAL APPEND PROPERTY SAL_EXTRA_POPULATE_DEPS fcremote)
 
 # -----------------------------------------------------------------------------
 # tar - TAR/GZIP/BZIP2/LZH/RPM/DEB archive extractor
