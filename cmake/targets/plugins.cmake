@@ -554,4 +554,220 @@ sal_add_plugin(NAME zip
   NO_SHARED
 )
 
+# -----------------------------------------------------------------------------
+# ieviewer - Internet Explorer-based HTML/Markdown viewer
+# -----------------------------------------------------------------------------
+sal_add_plugin(NAME ieviewer
+  SOURCES
+    # Shared sources
+    "${SAL_SHARED}/auxtools.cpp"
+    "${SAL_SHARED}/dbg.cpp"
+    # cmark-gfm extensions (C files)
+    "${SAL_PLUGINS}/ieviewer/cmark-gfm/extensions/autolink.c"
+    "${SAL_PLUGINS}/ieviewer/cmark-gfm/extensions/core-extensions.c"
+    "${SAL_PLUGINS}/ieviewer/cmark-gfm/extensions/ext_scanners.c"
+    "${SAL_PLUGINS}/ieviewer/cmark-gfm/extensions/strikethrough.c"
+    "${SAL_PLUGINS}/ieviewer/cmark-gfm/extensions/table.c"
+    "${SAL_PLUGINS}/ieviewer/cmark-gfm/extensions/tagfilter.c"
+    "${SAL_PLUGINS}/ieviewer/cmark-gfm/extensions/tasklist.c"
+    # cmark-gfm src (C files)
+    "${SAL_PLUGINS}/ieviewer/cmark-gfm/src/arena.c"
+    "${SAL_PLUGINS}/ieviewer/cmark-gfm/src/blocks.c"
+    "${SAL_PLUGINS}/ieviewer/cmark-gfm/src/buffer.c"
+    "${SAL_PLUGINS}/ieviewer/cmark-gfm/src/cmark.c"
+    "${SAL_PLUGINS}/ieviewer/cmark-gfm/src/cmark_ctype.c"
+    "${SAL_PLUGINS}/ieviewer/cmark-gfm/src/commonmark.c"
+    "${SAL_PLUGINS}/ieviewer/cmark-gfm/src/footnotes.c"
+    "${SAL_PLUGINS}/ieviewer/cmark-gfm/src/houdini_href_e.c"
+    "${SAL_PLUGINS}/ieviewer/cmark-gfm/src/houdini_html_e.c"
+    "${SAL_PLUGINS}/ieviewer/cmark-gfm/src/houdini_html_u.c"
+    "${SAL_PLUGINS}/ieviewer/cmark-gfm/src/html.c"
+    "${SAL_PLUGINS}/ieviewer/cmark-gfm/src/inlines.c"
+    "${SAL_PLUGINS}/ieviewer/cmark-gfm/src/iterator.c"
+    "${SAL_PLUGINS}/ieviewer/cmark-gfm/src/latex.c"
+    "${SAL_PLUGINS}/ieviewer/cmark-gfm/src/linked_list.c"
+    "${SAL_PLUGINS}/ieviewer/cmark-gfm/src/main.c"
+    "${SAL_PLUGINS}/ieviewer/cmark-gfm/src/man.c"
+    "${SAL_PLUGINS}/ieviewer/cmark-gfm/src/map.c"
+    "${SAL_PLUGINS}/ieviewer/cmark-gfm/src/node.c"
+    "${SAL_PLUGINS}/ieviewer/cmark-gfm/src/plaintext.c"
+    "${SAL_PLUGINS}/ieviewer/cmark-gfm/src/plugin.c"
+    "${SAL_PLUGINS}/ieviewer/cmark-gfm/src/references.c"
+    "${SAL_PLUGINS}/ieviewer/cmark-gfm/src/registry.c"
+    "${SAL_PLUGINS}/ieviewer/cmark-gfm/src/render.c"
+    "${SAL_PLUGINS}/ieviewer/cmark-gfm/src/scanners.c"
+    "${SAL_PLUGINS}/ieviewer/cmark-gfm/src/syntax_extension.c"
+    "${SAL_PLUGINS}/ieviewer/cmark-gfm/src/utf8.c"
+    "${SAL_PLUGINS}/ieviewer/cmark-gfm/src/xml.c"
+    # Plugin sources
+    "${SAL_PLUGINS}/ieviewer/ieviewer.cpp"
+    "${SAL_PLUGINS}/ieviewer/markdown.cpp"
+    "${SAL_PLUGINS}/ieviewer/precomp.cpp"
+  RC "${SAL_PLUGINS}/ieviewer/ieviewer.rc"
+  DEF "${SAL_PLUGINS}/ieviewer/ieviewer.def"
+  INCLUDES
+    "${SAL_PLUGINS}/ieviewer/cmark-gfm/src"
+    "${SAL_PLUGINS}/ieviewer/cmark-gfm/extensions"
+    "${SAL_PLUGINS}/ieviewer/cmark-gfm/build/src"
+    "${SAL_PLUGINS}/ieviewer/cmark-gfm/build/extensions"
+  DEFINES CMARK_GFM_STATIC_DEFINE CMARK_GFM_EXTENSIONS_STATIC_DEFINE
+  LIBS comsuppw
+  NO_SHARED
+)
+
+# Exclude cmark-gfm C files from precompiled headers
+file(GLOB CMARK_C_SOURCES
+  "${SAL_PLUGINS}/ieviewer/cmark-gfm/extensions/*.c"
+  "${SAL_PLUGINS}/ieviewer/cmark-gfm/src/*.c"
+)
+set_source_files_properties(${CMARK_C_SOURCES} PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
+
+# -----------------------------------------------------------------------------
+# checkver - Version checker for Salamander updates
+# -----------------------------------------------------------------------------
+sal_add_plugin(NAME checkver
+  SOURCES
+    "${SAL_SHARED}/dbg.cpp"
+    "${SAL_PLUGINS}/checkver/checkver.cpp"
+    "${SAL_PLUGINS}/checkver/data.cpp"
+    "${SAL_PLUGINS}/checkver/dialogs.cpp"
+    "${SAL_PLUGINS}/checkver/internet.cpp"
+    "${SAL_PLUGINS}/checkver/logwnd.cpp"
+    "${SAL_PLUGINS}/checkver/precomp.cpp"
+  RC "${SAL_PLUGINS}/checkver/checkver.rc"
+  DEF "${SAL_PLUGINS}/checkver/checkver.def"
+  LIBS wininet
+  NO_SHARED
+)
+
+# -----------------------------------------------------------------------------
+# dbviewer - Database file viewer (DBF, CSV)
+# -----------------------------------------------------------------------------
+sal_add_plugin(NAME dbviewer
+  SOURCES
+    "${SAL_SHARED}/auxtools.cpp"
+    "${SAL_SHARED}/dbg.cpp"
+    "${SAL_SHARED}/winliblt.cpp"
+    "${SAL_PLUGINS}/dbviewer/csvlib/csvlib.cpp"
+    "${SAL_PLUGINS}/dbviewer/dbflib/dbflib.cpp"
+    "${SAL_PLUGINS}/dbviewer/data.cpp"
+    "${SAL_PLUGINS}/dbviewer/dbviewer.cpp"
+    "${SAL_PLUGINS}/dbviewer/dialogs.cpp"
+    "${SAL_PLUGINS}/dbviewer/parser.cpp"
+    "${SAL_PLUGINS}/dbviewer/precomp.cpp"
+    "${SAL_PLUGINS}/dbviewer/renmain.cpp"
+    "${SAL_PLUGINS}/dbviewer/renpaint.cpp"
+  RC "${SAL_PLUGINS}/dbviewer/dbviewer.rc"
+  DEF "${SAL_PLUGINS}/dbviewer/dbviewer.def"
+  NO_SHARED
+)
+
+# -----------------------------------------------------------------------------
+# mmviewer - Multimedia file viewer (MP3, MP4, OGG, WAV, WMA, MOD, VQF)
+# -----------------------------------------------------------------------------
+sal_add_plugin(NAME mmviewer
+  SOURCES
+    "${SAL_PLUGINS}/mmviewer/buffer.cpp"
+    "${SAL_PLUGINS}/mmviewer/dialogs.cpp"
+    "${SAL_PLUGINS}/mmviewer/exporthtml.cpp"
+    "${SAL_PLUGINS}/mmviewer/exportxml.cpp"
+    "${SAL_PLUGINS}/mmviewer/mmviewer.cpp"
+    "${SAL_PLUGINS}/mmviewer/output.cpp"
+    "${SAL_PLUGINS}/mmviewer/parser.cpp"
+    "${SAL_PLUGINS}/mmviewer/precomp.cpp"
+    "${SAL_PLUGINS}/mmviewer/renmain.cpp"
+    "${SAL_PLUGINS}/mmviewer/renpaint.cpp"
+    # Format parsers
+    "${SAL_PLUGINS}/mmviewer/mod/modparser.cpp"
+    "${SAL_PLUGINS}/mmviewer/mp3/id3tagv1.cpp"
+    "${SAL_PLUGINS}/mmviewer/mp3/id3tagv2.cpp"
+    "${SAL_PLUGINS}/mmviewer/mp3/mpeghead.cpp"
+    "${SAL_PLUGINS}/mmviewer/mp3/mpgparser.cpp"
+    "${SAL_PLUGINS}/mmviewer/mp4/mp4head.cpp"
+    "${SAL_PLUGINS}/mmviewer/mp4/mp4parser.cpp"
+    "${SAL_PLUGINS}/mmviewer/mp4/mp4tag.cpp"
+    "${SAL_PLUGINS}/mmviewer/ogg/oggparser.cpp"
+    "${SAL_PLUGINS}/mmviewer/VQF/VQFPARSER.CPP"
+    "${SAL_PLUGINS}/mmviewer/wav/wavparser.cpp"
+    "${SAL_PLUGINS}/mmviewer/wma/wmaparser.cpp"
+  RC "${SAL_PLUGINS}/mmviewer/mmviewer.rc"
+  DEF "${SAL_PLUGINS}/mmviewer/mmviewer.def"
+  LIBS winmm msacm32
+)
+
+# -----------------------------------------------------------------------------
+# portables - Windows Portable Devices (WPD) filesystem plugin
+# -----------------------------------------------------------------------------
+sal_add_plugin(NAME portables
+  SOURCES
+    "${SAL_SHARED}/dbg.cpp"
+    "${SAL_SHARED}/mhandles.cpp"
+    "${SAL_SHARED}/winliblt.cpp"
+    "${SAL_PLUGINS}/portables/device.cpp"
+    "${SAL_PLUGINS}/portables/entry.cpp"
+    "${SAL_PLUGINS}/portables/fx.cpp"
+    "${SAL_PLUGINS}/portables/fxfs.cpp"
+    "${SAL_PLUGINS}/portables/globals.cpp"
+    "${SAL_PLUGINS}/portables/notifier.cpp"
+    "${SAL_PLUGINS}/portables/precomp.cpp"
+    "${SAL_PLUGINS}/portables/wpddeviceicons.cpp"
+    "${SAL_PLUGINS}/portables/wpdfs.cpp"
+    "${SAL_PLUGINS}/portables/wpdfscontentlevel.cpp"
+    "${SAL_PLUGINS}/portables/wpdfsdevicelevel.cpp"
+    "${SAL_PLUGINS}/portables/wpdplug.cpp"
+  RC "${SAL_PLUGINS}/portables/wpd.rc"
+  DEF "${SAL_PLUGINS}/portables/portables.def"
+  LIBS PortableDeviceGuids
+  NO_SHARED
+)
+
+# -----------------------------------------------------------------------------
+# wmobile - Windows Mobile device filesystem plugin
+# -----------------------------------------------------------------------------
+sal_add_plugin(NAME wmobile
+  SOURCES
+    "${SAL_PLUGINS}/wmobile/dialogs.cpp"
+    "${SAL_PLUGINS}/wmobile/fs1.cpp"
+    "${SAL_PLUGINS}/wmobile/fs2.cpp"
+    "${SAL_PLUGINS}/wmobile/precomp.cpp"
+    "${SAL_PLUGINS}/wmobile/rapi.cpp"
+    "${SAL_PLUGINS}/wmobile/wmobile.cpp"
+  RC "${SAL_PLUGINS}/wmobile/wmobile.rc"
+  DEF "${SAL_PLUGINS}/wmobile/wmobile.def"
+  INCLUDES "${SAL_PLUGINS}/wmobile/rapi"
+)
+
+# -----------------------------------------------------------------------------
+# undelete - Deleted file recovery (FAT/NTFS)
+# -----------------------------------------------------------------------------
+sal_add_plugin(NAME undelete
+  SOURCES
+    # Shared sources (compiled with plugin's precomp.h from library/)
+    "${SAL_SHARED}/auxtools.cpp"
+    "${SAL_SHARED}/dbg.cpp"
+    "${SAL_SHARED}/mhandles.cpp"
+    "${SAL_SHARED}/winliblt.cpp"
+    # Plugin sources
+    "${SAL_PLUGINS}/undelete/dialogs.cpp"
+    "${SAL_PLUGINS}/undelete/fs1.cpp"
+    "${SAL_PLUGINS}/undelete/fs2.cpp"
+    "${SAL_PLUGINS}/undelete/restore.cpp"
+    "${SAL_PLUGINS}/undelete/undelete.cpp"
+    # Library sources
+    "${SAL_PLUGINS}/undelete/library/fat.cpp"
+    "${SAL_PLUGINS}/undelete/library/miscstr.cpp"
+    "${SAL_PLUGINS}/undelete/library/ntfs.cpp"
+    "${SAL_PLUGINS}/undelete/library/os.cpp"
+    "${SAL_PLUGINS}/undelete/library/precomp.cpp"
+    "${SAL_PLUGINS}/undelete/library/stream.cpp"
+    "${SAL_PLUGINS}/undelete/library/volenum.cpp"
+    "${SAL_PLUGINS}/undelete/library/volume.cpp"
+  RC "${SAL_PLUGINS}/undelete/undelete.rc"
+  DEF "${SAL_PLUGINS}/undelete/undelete.def"
+  INCLUDES "${SAL_PLUGINS}/undelete/library"
+  LIBS uxtheme
+  PCH "library/precomp.h"
+  NO_SHARED
+)
+
 message(STATUS "Configured plugins with PCH support")
