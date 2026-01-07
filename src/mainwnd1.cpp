@@ -29,7 +29,11 @@
 #include "git_version.h"
 #endif
 
+#if defined(GIT_VERSION_AVAILABLE) && defined(GIT_VERSION)
+const char* SALAMANDER_TEXT_VERSION = "Open Salamander " GIT_VERSION " (" SAL_VER_PLATFORM ")";
+#else
 const char* SALAMANDER_TEXT_VERSION = "Open Salamander " VERSINFO_VERSION;
+#endif
 
 //****************************************************************************
 //

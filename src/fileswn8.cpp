@@ -499,7 +499,9 @@ void CFilesWindow::FilesAction(CActionType type, CFilesWindow* target, int count
                     // use 'if' instead of a 'switch' to ensure that 'break' and 'continue' work correctly
                     if (pathType == PATH_TYPE_WINDOWS) // Windows path (drive + UNC)
                     {
-                        if (strlen(path) >= MAX_PATH)
+                        // Note: SalSplitWindowsPath now uses CPathBuffer (SAL_MAX_LONG_PATH)
+                        // but the dialog path buffer is 2*MAX_PATH, so check against that
+                        if (strlen(path) >= 2 * MAX_PATH)
                         {
                             SalMessageBox(HWindow, LoadStr(IDS_TOOLONGPATH),
                                           (type == atCopy) ? LoadStr(IDS_ERRORCOPY) : LoadStr(IDS_ERRORMOVE),

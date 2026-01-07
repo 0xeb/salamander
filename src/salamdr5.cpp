@@ -922,8 +922,8 @@ BOOL SalSplitWindowsPath(HWND parent, const char* title, const char* errorTitle,
     if (*afterRoot == '\\')
         afterRoot++;
 
-    char newDirs[MAX_PATH];
-    char textBuf[2 * MAX_PATH + 200];
+    CPathBuffer newDirs;  // Heap-allocated for long path support
+    CPathBuffer textBuf;  // Heap-allocated for error messages with long paths
 
     if (SalSplitGeneralPath(parent, title, errorTitle, selCount, path, afterRoot, secondPart,
                             pathIsDir, backslashAtEnd, dirName, curDiskPath, mask, newDirs, NULL))
@@ -937,12 +937,12 @@ BOOL SalSplitWindowsPath(HWND parent, const char* title, const char* errorTitle,
 
         if (newDirs[0] != 0) // create new directories on target path
         {
-            memmove(newDirs + (secondPart - path), newDirs, strlen(newDirs) + 1);
-            memmove(newDirs, path, secondPart - path);
+            memmove(newDirs.Get() + (secondPart - path), newDirs.Get(), strlen(newDirs) + 1);
+            memmove(newDirs.Get(), path, secondPart - path);
             SalPathRemoveBackslash(newDirs);
 
             BOOL ok = TRUE;
-            char* st = newDirs + (secondPart - path);
+            char* st = newDirs.Get() + (secondPart - path);
             while (1)
             {
                 BOOL invalidPath = *st != 0 && *st <= ' ';
@@ -962,9 +962,9 @@ BOOL SalSplitWindowsPath(HWND parent, const char* title, const char* errorTitle,
                             invalidPath = TRUE;
                     }
                 }
-                if (invalidPath || !CreateDirectory(newDirs, NULL))
+                if (invalidPath || !SalLPCreateDirectory(newDirs, NULL))
                 {
-                    sprintf(textBuf, LoadStr(IDS_CREATEDIRFAILED), newDirs);
+                    _snprintf_s(textBuf.Get(), textBuf.Size(), _TRUNCATE, LoadStr(IDS_CREATEDIRFAILED), newDirs.Get());
                     SalMessageBox(parent, textBuf, errorTitle, MB_OK | MB_ICONEXCLAMATION);
                     ok = FALSE;
                     break;
@@ -978,8 +978,8 @@ BOOL SalSplitWindowsPath(HWND parent, const char* title, const char* errorTitle,
 
             //---  refresh of non-automatically refreshed directories (happens after ending
             // stop-refresh, so after the operation completes)
-            char changesRoot[MAX_PATH];
-            memmove(changesRoot, path, secondPart - path);
+            CPathBuffer changesRoot;  // Heap-allocated for long path support
+            memmove(changesRoot.Get(), path, secondPart - path);
             changesRoot[secondPart - path] = 0;
             // path change - creation of new subdirectories on path (needed even if
             // new directories failed to be created) - change without subdirectories (only subdirectories were being created)
@@ -1007,8 +1007,8 @@ BOOL SalSplitGeneralPath(HWND parent, const char* title, const char* errorTitle,
                          SGP_IsTheSamePathF isTheSamePathF)
 {
     mask = NULL;
-    char textBuf[2 * MAX_PATH + 200];
-    char tmpNewDirs[MAX_PATH];
+    CPathBuffer textBuf;   // Heap-allocated for long paths
+    CPathBuffer tmpNewDirs; // Heap-allocated for long paths
     tmpNewDirs[0] = 0;
     if (newDirs != NULL)
         newDirs[0] = 0;
@@ -1036,7 +1036,7 @@ BOOL SalSplitGeneralPath(HWND parent, const char* title, const char* errorTitle,
 
             if (maskFrom != secondPart) // there's some path before the mask
             {
-                memcpy(tmpNewDirs, secondPart, maskFrom - secondPart);
+                memcpy(tmpNewDirs.Get(), secondPart, maskFrom - secondPart);
                 tmpNewDirs[maskFrom - secondPart] = 0;
             }
 
@@ -1067,7 +1067,7 @@ BOOL SalSplitGeneralPath(HWND parent, const char* title, const char* errorTitle,
                 }
                 else // name with slash at end -> directory
                 {
-                    SalPathAppend(tmpNewDirs, maskFrom, MAX_PATH);
+                    SalPathAppend(tmpNewDirs.Get(), maskFrom, tmpNewDirs.Size());
                     SalPathAddBackslash(path, 2 * MAX_PATH); // path should always end with backslash, ensure it...
                     mask = path + strlen(path) + 1;
                     strcpy(mask, "*.*");
@@ -1080,21 +1080,21 @@ BOOL SalSplitGeneralPath(HWND parent, const char* title, const char* errorTitle,
                 if (newDirs != NULL) // creation is supported
                 {
                     strcpy(newDirs, tmpNewDirs);
-                    memmove(tmpNewDirs, path, secondPart - path);
-                    strcpy(tmpNewDirs + (secondPart - path), newDirs);
+                    memmove(tmpNewDirs.Get(), path, secondPart - path);
+                    strcpy(tmpNewDirs.Get() + (secondPart - path), newDirs);
                     SalPathRemoveBackslash(tmpNewDirs);
 
                     if (Configuration.CnfrmCreatePath) // ask if path should be created
                     {
                         BOOL dontShow = FALSE;
-                        sprintf(textBuf, LoadStr(IDS_MOVECOPY_CREATEPATH), tmpNewDirs);
+                        _snprintf_s(textBuf.Get(), textBuf.Size(), _TRUNCATE, LoadStr(IDS_MOVECOPY_CREATEPATH), tmpNewDirs.Get());
 
                         MSGBOXEX_PARAMS params;
                         memset(&params, 0, sizeof(params));
                         params.HParent = parent;
                         params.Flags = MSGBOXEX_YESNO | MSGBOXEX_ICONQUESTION | MSGBOXEX_SILENT | MSGBOXEX_ESCAPEENABLED | MSGBOXEX_HINT;
                         params.Caption = title;
-                        params.Text = textBuf;
+                        params.Text = textBuf.Get();
                         params.CheckBoxText = LoadStr(IDS_MOVECOPY_CREATEPATH_CNFRM);
                         params.CheckBoxValue = &dontShow;
                         BOOL cont = (SalMessageBoxEx(&params) != IDYES);
