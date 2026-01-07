@@ -24,10 +24,37 @@ function(sal_install_runtime)
   if(MSVC)
     # Prevent the module from creating its own install rules (which go to bin/)
     set(CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS_SKIP TRUE)
+    # Also find debug runtime libraries (adds to CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS)
+    set(CMAKE_INSTALL_DEBUG_LIBRARIES TRUE)
     include(InstallRequiredSystemLibraries)
-    # Install only to root directory where salamander.exe is
-    if(CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS)
-      install(PROGRAMS ${CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS} DESTINATION .)
+
+    # Separate debug and release libs into different lists
+    # Debug libs are in paths containing "Debug_NonRedist" or "DebugCRT"
+    set(RELEASE_RUNTIME_LIBS)
+    set(DEBUG_RUNTIME_LIBS)
+    foreach(LIB ${CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS})
+      string(FIND "${LIB}" "Debug" IS_DEBUG_PATH)
+      if(IS_DEBUG_PATH GREATER -1)
+        list(APPEND DEBUG_RUNTIME_LIBS "${LIB}")
+      else()
+        list(APPEND RELEASE_RUNTIME_LIBS "${LIB}")
+      endif()
+    endforeach()
+
+    # Install release libs for non-Debug configs
+    if(RELEASE_RUNTIME_LIBS)
+      install(PROGRAMS ${RELEASE_RUNTIME_LIBS}
+        DESTINATION .
+        CONFIGURATIONS Release RelWithDebInfo MinSizeRel
+      )
+    endif()
+
+    # Install debug libs for Debug config
+    if(DEBUG_RUNTIME_LIBS)
+      install(PROGRAMS ${DEBUG_RUNTIME_LIBS}
+        DESTINATION .
+        CONFIGURATIONS Debug
+      )
     endif()
   endif()
 endfunction()

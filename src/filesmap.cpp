@@ -38,7 +38,6 @@ CFilesMap::CFilesMap()
 
 CFilesMap::~CFilesMap()
 {
-    Map = NULL;
     DestroyMap();
 }
 

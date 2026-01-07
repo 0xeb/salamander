@@ -422,6 +422,7 @@ sal_add_plugin(NAME filecomp
 # -----------------------------------------------------------------------------
 add_executable(fcremote
   "${SAL_SHARED}/plugcore/messages.cpp"
+  "${SAL_SRC}/common/rtc_stubs.cpp"
   "${SAL_PLUGINS}/filecomp/fcremote/fcremote.cpp"
   "${SAL_PLUGINS}/filecomp/fcremote/fcremote.rc"
 )

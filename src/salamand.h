@@ -73,6 +73,9 @@ public:
         free(member.Name);
         if (member.DosName != NULL)
             free(member.DosName);
+        // Explicitly destroy the wide name string (can't use swap - it allocates a new proxy block
+        // that would leak because TDirectArray doesn't call C++ destructors on removal)
+        member.NameW.~basic_string();
     }
 };
 

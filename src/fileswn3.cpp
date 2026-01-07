@@ -302,7 +302,7 @@ BOOL CFilesWindow::ReadDirectory(HWND parent, BOOL isRefresh)
         char ansiFileName[MAX_PATH];      // ANSI conversion buffer for cFileName (also used as scratch)
         BOOL nameConversionLossy = FALSE; // TRUE if wide->ANSI conversion lost characters
         HANDLE search;
-        search = SalLPFindFirstFile(fileName, &fileDataW);
+        search = SalFindFirstFileHW(fileName, &fileDataW);
         if (search == INVALID_HANDLE_VALUE)
         {
             DWORD err = GetLastError();
@@ -894,7 +894,7 @@ BOOL CFilesWindow::ReadDirectory(HWND parent, BOOL isRefresh)
             upDir = FALSE;
             *(fileNameEnd - 1) = 0; // it's not logical, but times ".." are from current directory
             if (!UNCRootUpDir)
-                search = SalLPFindFirstFile(fileName, &fileDataW);
+                search = SalFindFirstFileHW(fileName, &fileDataW);
             else
                 search = INVALID_HANDLE_VALUE;
             if (search == INVALID_HANDLE_VALUE)

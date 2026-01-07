@@ -247,6 +247,7 @@ set_target_properties(salmon PROPERTIES
 # salspawn - Process spawning helper (console)
 add_executable(salspawn
   "${SAL_SRC}/common/lstrfix.cpp"
+  "${SAL_SRC}/common/rtc_stubs.cpp"
   "${SAL_SRC}/salspawn/salspawn.cpp"
   "${SAL_SRC}/salspawn/salspawn.rc"
 )
@@ -281,6 +282,7 @@ set_target_properties(salspawn PROPERTIES
 # salopen - Open files helper (windows)
 add_executable(salopen
   "${SAL_SRC}/common/lstrfix.cpp"
+  "${SAL_SRC}/common/rtc_stubs.cpp"
   "${SAL_SRC}/salopen/salopen.cpp"
   "${SAL_SRC}/salopen/salopen.rc"
 )

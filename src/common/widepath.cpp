@@ -283,6 +283,46 @@ CPathBuffer::~CPathBuffer()
 }
 
 //
+// CWidePathBuffer class implementation
+//
+
+CWidePathBuffer::CWidePathBuffer()
+    : m_buffer(NULL)
+{
+    m_buffer = (wchar_t*)malloc(SAL_MAX_LONG_PATH * sizeof(wchar_t));
+    if (m_buffer != NULL)
+    {
+        m_buffer[0] = L'\0';
+    }
+}
+
+CWidePathBuffer::CWidePathBuffer(const wchar_t* initialPath)
+    : m_buffer(NULL)
+{
+    m_buffer = (wchar_t*)malloc(SAL_MAX_LONG_PATH * sizeof(wchar_t));
+    if (m_buffer != NULL)
+    {
+        if (initialPath != NULL)
+        {
+            wcsncpy(m_buffer, initialPath, SAL_MAX_LONG_PATH - 1);
+            m_buffer[SAL_MAX_LONG_PATH - 1] = L'\0';
+        }
+        else
+        {
+            m_buffer[0] = L'\0';
+        }
+    }
+}
+
+CWidePathBuffer::~CWidePathBuffer()
+{
+    if (m_buffer != NULL)
+    {
+        free(m_buffer);
+    }
+}
+
+//
 // Convenience wrappers
 //
 
@@ -498,6 +538,22 @@ HANDLE SalLPFindFirstFileTracked(
     int srcLine)
 {
     HANDLE h = SalLPFindFirstFileA(fileName, findData);
+
+    // Track the handle using Salamander's handle tracking system
+    DWORD err = GetLastError();
+    __Handles.SetInfo(srcFile, srcLine, __otQuiet)
+        .CheckCreate(h != INVALID_HANDLE_VALUE, __htFindFile, __hoFindFirstFile, h, err, TRUE);
+
+    return h;
+}
+
+HANDLE SalLPFindFirstFileTrackedW(
+    const char* fileName,
+    WIN32_FIND_DATAW* findData,
+    const char* srcFile,
+    int srcLine)
+{
+    HANDLE h = SalLPFindFirstFile(fileName, findData);
 
     // Track the handle using Salamander's handle tracking system
     DWORD err = GetLastError();

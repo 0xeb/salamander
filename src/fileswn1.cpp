@@ -18,6 +18,7 @@
 #include "thumbnl.h"
 #include "geticon.h"
 #include "shiconov.h"
+#include "common/widepath.h"
 
 //
 // ****************************************************************************
@@ -461,12 +462,10 @@ unsigned IconThreadThreadFBody(void* parameter)
                 SHFILEINFO shi; // for historical reasons (SHGetFileInfo) shi.hIcon is used for all icon types
 
                 // prepare the full path for files/directories being loaded (only when window->Is(ptDisk))
-                char path[MAX_PATH + 10];
-                path[0] = 0;
-                WCHAR wPath[MAX_PATH + 10];
-                wPath[0] = 0;
-                char* name = path;
-                WCHAR* wName = wPath;
+                CPathBuffer path;
+                CWidePathBuffer wPath;
+                char* name = path.Get();
+                WCHAR* wName = wPath.Get();
                 BOOL pathIsInvalid = FALSE;
                 BOOL isGoogleDrivePath = FALSE;
                 if (window->Is(ptDisk))
@@ -475,10 +474,10 @@ unsigned IconThreadThreadFBody(void* parameter)
                     memmove(path, window->GetPath(), l);
                     if (path[l - 1] != '\\')
                         path[l++] = '\\';
-                    name = path + l; // pointer to the location of the name in the full path
+                    name = path.Get() + l; // pointer to the location of the name in the full path
                     *name = 0;
-                    MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, path, l, wPath, MAX_PATH + 10);
-                    wName = wPath + l;
+                    MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, path.Get(), l, wPath.Get(), wPath.Size());
+                    wName = wPath.Get() + l;
                     *wName = 0;
                     pathIsInvalid = !PathContainsValidComponents(path, FALSE);
                     if (pathIsInvalid)
@@ -673,7 +672,7 @@ unsigned IconThreadThreadFBody(void* parameter)
                                     *name = 0;
                                     //                    TRACE_I("Getting icon overlay index for: " << fileName << "...");
                                     SLOW_CALL_STACK_MESSAGE5("IconThreadThreadFBody::GetIconOverlayIndex(%s%s, 0x%08X, %d)",
-                                                             path, fileName, fileAttrs, isGoogleDrivePath);
+                                                             path.Get(), fileName, fileAttrs, isGoogleDrivePath);
                                     DWORD iconOverlayIndex = ShellIconOverlays.GetIconOverlayIndex(wPath, wName, path, name,
                                                                                                    fileName, fileAttrs,
                                                                                                    minPriority, iconReadersIconOverlayIds,
@@ -736,7 +735,7 @@ unsigned IconThreadThreadFBody(void* parameter)
                                                 }
 
                                                 // let the icon be loaded from the file; the icon reader may enter sleep mode during loading
-                                                CALL_STACK_MESSAGE3("IconThreadThreadFBody::GetFileIcon(%s, %d)", path, iconSize);
+                                                CALL_STACK_MESSAGE3("IconThreadThreadFBody::GetFileIcon(%s, %d)", path.Get(), iconSize);
 
                                                 if (!pathIsInvalid)
                                                 {
@@ -835,7 +834,7 @@ unsigned IconThreadThreadFBody(void* parameter)
                                             {
                                                 // load the icon from the file (ExtractIcons retrieves it by index);
                                                 // the icon reader may go to sleep mode while loading
-                                                CALL_STACK_MESSAGE4("IconThreadThreadFBody::ExtractIcons(%s, %d, %d, ...)", path, index, IconSizes[iconSize]);
+                                                CALL_STACK_MESSAGE4("IconThreadThreadFBody::ExtractIcons(%s, %d, %d, ...)", path.Get(), index, IconSizes[iconSize]);
                                                 if (ExtractIcons(path, index, IconSizes[iconSize], IconSizes[iconSize], &shi.hIcon, NULL, 1, IconLRFlags) != 1)
                                                 {
                                                     TRACE_I("Unable to get icon from: " << path << ", " << index);
@@ -849,7 +848,7 @@ unsigned IconThreadThreadFBody(void* parameter)
                                             {
                                                 {
                                                     // load the icon from a file (likely .ico); the icon reader can switch to sleep mode during loading
-                                                    CALL_STACK_MESSAGE2("IconThreadThreadFBody::LoadImage(%s)", path);
+                                                    CALL_STACK_MESSAGE2("IconThreadThreadFBody::LoadImage(%s)", path.Get());
                                                     shi.hIcon = (HICON)NOHANDLES(LoadImage(NULL, path, IMAGE_ICON, IconSizes[iconSize], IconSizes[iconSize],
                                                                                            LR_LOADFROMFILE | IconLRFlags));
                                                     //                            TRACE_I("LoadImage " << (shi.hIcon == NULL ? "has failed, now trying ExtractIcons..." : "is done."));
@@ -857,7 +856,7 @@ unsigned IconThreadThreadFBody(void* parameter)
                                                 if (shi.hIcon == NULL) // LoadImage failed; trying ExtractIcons as well (e.g., an icon without index from zipfldr.dll on XP: a .zip archive packed in a .7z archive)
                                                 {
                                                     // let the first icon load from the file; the icon reader may enter sleep mode while loading
-                                                    CALL_STACK_MESSAGE3("IconThreadThreadFBody::ExtractIcons(%s, (0), %d, ...)", path, IconSizes[iconSize]);
+                                                    CALL_STACK_MESSAGE3("IconThreadThreadFBody::ExtractIcons(%s, (0), %d, ...)", path.Get(), IconSizes[iconSize]);
                                                     if (ExtractIcons(path, 0, IconSizes[iconSize], IconSizes[iconSize], &shi.hIcon, NULL, 1, IconLRFlags) != 1)
                                                     {
                                                         TRACE_I("Unable to get first icon from: " << path);
@@ -889,7 +888,7 @@ unsigned IconThreadThreadFBody(void* parameter)
                                                 {
                                                     int thumbnailSize = window->GetThumbnailSize();
                                                     thumbMaker.Clear(thumbnailSize);
-                                                    CALL_STACK_MESSAGE3("IconThreadThreadFBody::LoadThumbnail(%s, %d)", path, wanted == 4);
+                                                    CALL_STACK_MESSAGE3("IconThreadThreadFBody::LoadThumbnail(%s, %d)", path.Get(), wanted == 4);
                                                     if ((*loader)->LoadThumbnail(path, thumbnailSize, thumbnailSize, &thumbMaker, wanted == 4))
                                                     {
                                                         thumbnailFlag = wanted == 4 /* first thumbnail loading round */ ? (thumbMaker.IsOnlyPreview() ? 6 /* low-quality/smaller */ : 5 /* quality */) : 5 /* in the second round all obtained thumbnails are quality */;

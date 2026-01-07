@@ -3575,7 +3575,7 @@ int WinMainBody(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPSTR cmdLine,
     // dalsi zajimava funkce pro ladeni: pokud dojde k memory leaku, v zavorce je zobrazeno
     // dekadicke cislo, ktere udava poradi alokovaneho bloku, napriklad _CRT_WARN: {104200};
     // funkci _CrtSetBreakAlloc umoznuje breaknou na tomto bloku
-    // _CrtSetBreakAlloc(33521);
+    // _CrtSetBreakAlloc(7700);
 
     LastCrtCheckMemoryTime = GetTickCount();
 

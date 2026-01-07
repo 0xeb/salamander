@@ -74,6 +74,50 @@ private:
 };
 
 //
+// CWidePathBuffer
+//
+// RAII heap-allocated wide buffer for path operations. Supports full OS path limit.
+// Use this instead of wchar_t[MAX_PATH] for paths that may exceed 260 characters.
+//
+// Usage:
+//   CWidePathBuffer path;
+//   wcscpy(path.Get(), L"C:\some\path");
+//
+class CWidePathBuffer
+{
+public:
+    // Constructs empty buffer (heap-allocated, full OS limit)
+    CWidePathBuffer();
+
+    // Constructs buffer initialized with a path
+    explicit CWidePathBuffer(const wchar_t* initialPath);
+
+    // Destructor frees allocated memory
+    ~CWidePathBuffer();
+
+    // Returns pointer to the buffer
+    wchar_t* Get() { return m_buffer; }
+    const wchar_t* Get() const { return m_buffer; }
+
+    // Returns buffer size (SAL_MAX_LONG_PATH)
+    int Size() const { return SAL_MAX_LONG_PATH; }
+
+    // Implicit conversion for convenience
+    operator wchar_t*() { return m_buffer; }
+    operator const wchar_t*() const { return m_buffer; }
+
+    // Returns TRUE if allocation succeeded
+    BOOL IsValid() const { return m_buffer != NULL; }
+
+private:
+    wchar_t* m_buffer;
+
+    // Disable copy
+    CWidePathBuffer(const CWidePathBuffer&);
+    CWidePathBuffer& operator=(const CWidePathBuffer&);
+};
+
+//
 // SalWidePath
 //
 // RAII wrapper for wide path conversion. Converts ANSI path to wide string
@@ -276,10 +320,20 @@ HANDLE SalLPFindFirstFileTracked(
     const char* srcFile,
     int srcLine);
 
+// FindFirstFile (wide data) with handle tracking - use instead of HANDLES_Q(FindFirstFileW(...))
+#define SalFindFirstFileHW(fileName, findData)     SalLPFindFirstFileTrackedW(fileName, findData, __FILE__, __LINE__)
+
+HANDLE SalLPFindFirstFileTrackedW(
+    const char* fileName,
+    WIN32_FIND_DATAW* findData,
+    const char* srcFile,
+    int srcLine);
+
 #else // !HANDLES_ENABLE
 
 // In release builds, just use the regular wrapper
 #define SalCreateFileH SalLPCreateFile
 #define SalFindFirstFileH SalLPFindFirstFileA
+#define SalFindFirstFileHW SalLPFindFirstFile
 
 #endif // HANDLES_ENABLE
