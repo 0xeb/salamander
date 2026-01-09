@@ -20,6 +20,7 @@
 #include "codetbl.h"
 #include "find.h"
 #include "menu.h"
+#include "common/widepath.h"
 
 //
 // ****************************************************************************
@@ -2105,6 +2106,13 @@ void CFilesWindow::RenameFileInternal(CFileData* f, const char* formatedFileName
         MakeValidFileName(finalName);
 
         int l = (int)strlen(GetPath());
+        // Guard against buffer overflow - this function only handles paths up to MAX_PATH
+        if (l >= MAX_PATH)
+        {
+            SalMessageBox(HWindow, LoadStr(IDS_TOOLONGNAME), LoadStr(IDS_ERRORTITLE), MB_OK | MB_ICONEXCLAMATION);
+            *tryAgain = FALSE;
+            return;
+        }
         char tgtPath[MAX_PATH];
         memmove(tgtPath, GetPath(), l);
         if (GetPath()[l - 1] != '\\')
@@ -2310,6 +2318,122 @@ void CFilesWindow::RenameFileInternal(CFileData* f, const char* formatedFileName
                       MB_OK | MB_ICONEXCLAMATION);
 }
 
+void CFilesWindow::RenameFileInternalW(CFileData* f, const std::wstring& newName, BOOL* mayChange, BOOL* tryAgain)
+{
+    *tryAgain = TRUE;
+
+    // Validate the new filename - check for invalid characters
+    for (wchar_t c : newName)
+    {
+        if (c == L'\\' || c == L'/' || c == L':' || c < 32 ||
+            c == L'<' || c == L'>' || c == L'|' || c == L'"')
+        {
+            SalMessageBox(HWindow, GetErrorText(ERROR_INVALID_NAME), LoadStr(IDS_ERRORRENAMINGFILE),
+                          MB_OK | MB_ICONEXCLAMATION);
+            return;
+        }
+    }
+
+    if (newName.empty())
+    {
+        SalMessageBox(HWindow, GetErrorText(ERROR_INVALID_NAME), LoadStr(IDS_ERRORRENAMINGFILE),
+                      MB_OK | MB_ICONEXCLAMATION);
+        return;
+    }
+
+    // Convert current path to wide string
+    std::wstring pathW;
+    int pathLen = MultiByteToWideChar(CP_ACP, 0, GetPath(), -1, NULL, 0);
+    if (pathLen > 0)
+    {
+        pathW.resize(pathLen);
+        MultiByteToWideChar(CP_ACP, 0, GetPath(), -1, &pathW[0], pathLen);
+        pathW.resize(pathLen - 1); // remove null terminator from length
+    }
+
+    // Build source path using the original wide name (or convert ANSI name if no wide name)
+    std::wstring srcPath = pathW;
+    if (!srcPath.empty() && srcPath.back() != L'\\')
+        srcPath += L'\\';
+    if (!f->NameW.empty())
+    {
+        srcPath += f->NameW;
+    }
+    else
+    {
+        // Convert ANSI filename to Unicode
+        wchar_t nameW[MAX_PATH];
+        MultiByteToWideChar(CP_ACP, 0, f->Name, -1, nameW, MAX_PATH);
+        srcPath += nameW;
+    }
+
+    // Build target path
+    std::wstring tgtPath = pathW;
+    if (!tgtPath.empty() && tgtPath.back() != L'\\')
+        tgtPath += L'\\';
+    tgtPath += newName;
+
+    // Convert paths to ANSI for SalLPMoveFile (which expects ANSI and converts to wide internally)
+    // For true Unicode support, we need to use the wide path directly with MoveFileW
+    // Use the \\?\ prefix for long path support
+    std::wstring srcPathLong = L"\\\\?\\" + srcPath;
+    std::wstring tgtPathLong = L"\\\\?\\" + tgtPath;
+
+    // Check if other panel needs to be notified
+    BOOL handsOFF = FALSE;
+    CFilesWindow* otherPanel = MainWindow->GetNonActivePanel();
+    std::wstring otherPathW;
+    int otherPathLen = MultiByteToWideChar(CP_ACP, 0, otherPanel->GetPath(), -1, NULL, 0);
+    if (otherPathLen > 0)
+    {
+        otherPathW.resize(otherPathLen);
+        MultiByteToWideChar(CP_ACP, 0, otherPanel->GetPath(), -1, &otherPathW[0], otherPathLen);
+        otherPathW.resize(otherPathLen - 1);
+    }
+
+    if (otherPathW.length() >= srcPath.length() &&
+        _wcsnicmp(srcPath.c_str(), otherPathW.c_str(), srcPath.length()) == 0 &&
+        (otherPathW.length() == srcPath.length() || otherPathW[srcPath.length()] == L'\\'))
+    {
+        otherPanel->HandsOff(TRUE);
+        handsOFF = TRUE;
+    }
+
+    *mayChange = TRUE;
+
+    // Perform the rename using wide API
+    BOOL moveRet = MoveFileW(srcPathLong.c_str(), tgtPathLong.c_str());
+    DWORD err = 0;
+    if (!moveRet)
+    {
+        err = GetLastError();
+        // Try without the long path prefix if it failed
+        if (err == ERROR_INVALID_NAME || err == ERROR_PATH_NOT_FOUND)
+        {
+            moveRet = MoveFileW(srcPath.c_str(), tgtPath.c_str());
+            if (!moveRet)
+                err = GetLastError();
+        }
+    }
+
+    if (moveRet)
+    {
+        // Convert new name to ANSI for NextFocusName (best effort)
+        WideCharToMultiByte(CP_ACP, 0, newName.c_str(), -1, NextFocusName, MAX_PATH, "?", NULL);
+        *tryAgain = FALSE;
+    }
+    else
+    {
+        if (err != ERROR_SUCCESS)
+            SalMessageBox(HWindow, GetErrorText(err), LoadStr(IDS_ERRORRENAMINGFILE),
+                          MB_OK | MB_ICONEXCLAMATION);
+        *tryAgain = FALSE; // Don't retry on error for Unicode files
+    }
+
+    if (handsOFF)
+        otherPanel->HandsOff(FALSE);
+}
+
 void CFilesWindow::RenameFile(int specialIndex)
 {
     CALL_STACK_MESSAGE2("CFilesWindow::RenameFile(%d)", specialIndex);
@@ -2334,16 +2458,22 @@ void CFilesWindow::RenameFile(int specialIndex)
     BOOL isDir = i < Dirs->Count;
     f = isDir ? &Dirs->At(i) : &Files->At(i - Dirs->Count);
 
+    BOOL useUnicode = f->UseWideName();
     char formatedFileName[MAX_PATH];
     AlterFileName(formatedFileName, f->Name, -1, Configuration.FileNameFormat, 0, isDir);
 
     char buff[200];
     sprintf(buff, LoadStr(IDS_RENAME_TO), LoadStr(isDir ? IDS_QUESTION_DIRECTORY : IDS_QUESTION_FILE));
     CTruncatedString subject;
-    subject.Set(buff, formatedFileName);
+    subject.Set(buff, useUnicode ? "..." : formatedFileName);
     CCopyMoveDialog dlg(HWindow, formatedFileName, MAX_PATH, LoadStr(IDS_RENAME_TITLE),
                         &subject, IDD_RENAMEDIALOG, Configuration.QuickRenameHistory,
                         QUICKRENAME_HISTORY_SIZE, FALSE);
+
+    if (useUnicode)
+    {
+        dlg.SetUnicodePath(f->NameW);
+    }
 
     if (Is(ptDisk)) // rename on disk
     {
@@ -2378,10 +2508,18 @@ void CFilesWindow::RenameFile(int specialIndex)
                 int selectionEnd = -1;
                 if (!isDir)
                 {
-                    const char* dot = strrchr(formatedFileName, '.');
-                    if (dot != NULL && dot > formatedFileName) // although ".cvspass" is an extension in Windows, Explorer selects the entire name, so we do the same
-                                                               //        if (dot != NULL)
-                        selectionEnd = (int)(dot - formatedFileName);
+                    if (useUnicode)
+                    {
+                        const wchar_t* dotW = wcsrchr(f->NameW.c_str(), L'.');
+                        if (dotW != NULL && dotW > f->NameW.c_str())
+                            selectionEnd = (int)(dotW - f->NameW.c_str());
+                    }
+                    else
+                    {
+                        const char* dot = strrchr(formatedFileName, '.');
+                        if (dot != NULL && dot > formatedFileName)
+                            selectionEnd = (int)(dot - formatedFileName);
+                    }
                 }
                 dlg.SetSelectionEnd(selectionEnd);
             }
@@ -2396,7 +2534,28 @@ void CFilesWindow::RenameFile(int specialIndex)
                 UpdateWindow(MainWindow->HWindow);
 
                 BOOL tryAgain;
-                RenameFileInternal(f, formatedFileName, &mayChange, &tryAgain);
+                // Use Unicode path if: 1) file has Unicode name, or 2) path is too long for ANSI
+                BOOL pathTooLong = (strlen(GetPath()) >= MAX_PATH);
+                if ((useUnicode && !dlg.GetUnicodeResult().empty()) || pathTooLong)
+                {
+                    std::wstring newNameW;
+                    if (useUnicode && !dlg.GetUnicodeResult().empty())
+                    {
+                        newNameW = dlg.GetUnicodeResult();
+                    }
+                    else
+                    {
+                        // Convert ANSI filename to Unicode for long path handling
+                        wchar_t wideBuffer[MAX_PATH];
+                        MultiByteToWideChar(CP_ACP, 0, formatedFileName, -1, wideBuffer, MAX_PATH);
+                        newNameW = wideBuffer;
+                    }
+                    RenameFileInternalW(f, newNameW, &mayChange, &tryAgain);
+                }
+                else
+                {
+                    RenameFileInternal(f, formatedFileName, &mayChange, &tryAgain);
+                }
                 if (!tryAgain)
                     break;
             }

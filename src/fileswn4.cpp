@@ -882,6 +882,20 @@ void CFilesWindow::DrawBriefDetailedItem(HDC hTgtDC, int itemIndex, RECT* itemRe
                         // extension is an exception - it always follows Name and we handle it explicitly
                         if (isDir && !Configuration.SortDirsByExt || f->Ext[0] == 0 || f->Ext <= f->Name + 1) // empty value in the Ext column (exception for names like ".htaccess", they appear in the Name column even though they are extensions)
                             TransferLen = 0;
+                        else if (f->UseWideName())
+                        {
+                            // For Unicode filenames, find extension in NameW instead of using ANSI offset
+                            const wchar_t* extPosW = wcsrchr(f->NameW.c_str(), L'.');
+                            if (extPosW != NULL && extPosW > f->NameW.c_str())
+                            {
+                                extPosW++; // skip the dot
+                                TransferLen = (int)wcslen(extPosW);
+                                // Copy extension to wide buffer and draw with ExtTextOutW below
+                                wmemcpy(DrawItemBuffW, extPosW, TransferLen + 1);
+                            }
+                            else
+                                TransferLen = 0;
+                        }
                         else
                         {
                             if (!fileNameFormated)
@@ -894,6 +908,59 @@ void CFilesWindow::DrawBriefDetailedItem(HDC hTgtDC, int itemIndex, RECT* itemRe
 
                     if (TransferLen == 0)
                         ExtTextOut(hDC, r.left, y, ETO_OPAQUE, &adjR, "", 0, NULL); // just clearing
+                    else if (f->UseWideName() && column->ID == COLUMN_ID_EXTENSION)
+                    {
+                        // Unicode extension drawing - use DrawItemBuffW which was populated above
+                        if (column->FixedWidth == 1)
+                        {
+                            int fitChars;
+                            int textWidth = r.right - r.left - SPACE_WIDTH;
+                            GetTextExtentExPointW(hDC, DrawItemBuffW, TransferLen, textWidth,
+                                                  &fitChars, DrawItemAlpDx, &textSize);
+                            if (fitChars < TransferLen)
+                            {
+                                while (fitChars > 0 && DrawItemAlpDx[fitChars - 1] + TextEllipsisWidth > textWidth)
+                                    fitChars--;
+                                int totalCount;
+                                if (fitChars > 0)
+                                {
+                                    wmemmove(DrawItemBuffW + fitChars, L"...", 3);
+                                    totalCount = fitChars + 3;
+                                }
+                                else
+                                {
+                                    DrawItemBuffW[1] = L'.';
+                                    totalCount = 2;
+                                }
+                                ExtTextOutW(hDC, r.left + SPACE_WIDTH / 2, y, ETO_OPAQUE, &adjR, DrawItemBuffW, totalCount, NULL);
+                            }
+                            else
+                            {
+                                if (column->LeftAlignment == 0)
+                                {
+                                    deltaX = r.right - r.left - SPACE_WIDTH / 2 - textSize.cx;
+                                    if (deltaX < SPACE_WIDTH / 2)
+                                        deltaX = SPACE_WIDTH / 2;
+                                }
+                                else
+                                    deltaX = SPACE_WIDTH / 2;
+                                ExtTextOutW(hDC, r.left + deltaX, y, ETO_OPAQUE, &adjR, DrawItemBuffW, TransferLen, NULL);
+                            }
+                        }
+                        else
+                        {
+                            if (column->LeftAlignment == 0)
+                            {
+                                GetTextExtentPoint32W(hDC, DrawItemBuffW, TransferLen, &textSize);
+                                deltaX = r.right - r.left - SPACE_WIDTH / 2 - textSize.cx;
+                                if (deltaX < SPACE_WIDTH / 2)
+                                    deltaX = SPACE_WIDTH / 2;
+                            }
+                            else
+                                deltaX = SPACE_WIDTH / 2;
+                            ExtTextOutW(hDC, r.left + deltaX, y, ETO_OPAQUE, &adjR, DrawItemBuffW, TransferLen, NULL);
+                        }
+                    }
                     else
                     {
                         if (column->FixedWidth == 1) // NarrowedNameColumn does not apply here (not Name column)
