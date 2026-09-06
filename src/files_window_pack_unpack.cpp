@@ -395,6 +395,38 @@ const char* WINAPI PanelSalEnumSelection(HWND parent, int enumFiles, BOOL* isDir
     return _PanelSalEnumSelection(enumFiles, NULL, isDir, size, fileData, param, parent, errorOccured);
 }
 
+namespace
+{
+class CExactWideCurrentDirectoryScope
+{
+public:
+    CExactWideCurrentDirectoryScope() : Environment(gEnvironment != NULL ? gEnvironment : GetWin32Environment()), Active(FALSE) {}
+
+    ~CExactWideCurrentDirectoryScope()
+    {
+        if (Active)
+            Environment->SetCurrentDirectory(Original.c_str());
+    }
+
+    EnvResult Enter(const wchar_t* directory)
+    {
+        EnvResult result = Environment->GetCurrentDirectory(Original);
+        if (!result.success)
+            return result;
+
+        result = Environment->SetCurrentDirectory(directory);
+        if (result.success)
+            Active = TRUE;
+        return result;
+    }
+
+private:
+    IEnvironment* Environment;
+    std::wstring Original;
+    BOOL Active;
+};
+}
+
 void CFilesWindow::UnpackZIPArchive(CFilesWindow* target, BOOL deleteOp, const char* tgtPath)
 {
     CALL_STACK_MESSAGE3("CFilesWindow::UnpackZIPArchive(, %d, %s)", deleteOp, tgtPath);
@@ -490,13 +522,18 @@ void CFilesWindow::UnpackZIPArchive(CFilesWindow* target, BOOL deleteOp, const c
 
     CPathBuffer changesRoot; // directory from which changes on disk are taken into account
     changesRoot[0] = 0;
+    std::wstring changesRootW;
 
     if (!deleteOp) // copy
     {
         //---  obtain the target directory
+        std::wstring initialTargetPathW;
         if (target != NULL && target->Is(ptDisk))
         {
             strcpy(path, target->GetPath());
+            initialTargetPathW = target->GetPathW();
+            if (initialTargetPathW.empty())
+                initialTargetPathW = AnsiToWide(target->GetPath());
 
             target->UserWorkedOnThisPath = TRUE; // default action = operate with the path in the target panel
         }
@@ -504,15 +541,65 @@ void CFilesWindow::UnpackZIPArchive(CFilesWindow* target, BOOL deleteOp, const c
             path[0] = 0;
 
         CCopyMoveDialog dlg(HWindow, path, path.Size(), LoadStr(IDS_UNPACKCOPY), &str, IDD_COPYDIALOG,
-                            Configuration.CopyHistory, COPY_HISTORY_SIZE, TRUE);
+                            Configuration.CopyHistory, COPY_HISTORY_SIZE, TRUE,
+                            Configuration.CopyHistoryW, COPY_HISTORY_SIZE);
+        std::string initialTargetPathA;
+        if (!initialTargetPathW.empty() &&
+            !sally::unicode::TryWideToAnsiRoundTripExact(initialTargetPathW, initialTargetPathA))
+        {
+            dlg.SetUnicodePath(initialTargetPathW);
+        }
 
     _DLG_AGAIN:
 
         if (tgtPath != NULL || dlg.Execute() == IDOK)
         {
+            std::wstring exactWideTarget;
+            std::string exactWideTargetA;
+            BOOL exactWideTargetProjects = FALSE;
             if (tgtPath != NULL)
                 lstrcpyn(path, tgtPath, path.Size());
+            else if (dlg.IsUnicodeMode())
+            {
+                exactWideTarget = dlg.GetUnicodeResult();
+                exactWideTargetProjects = sally::unicode::TryWideToAnsiRoundTripExact(exactWideTarget, exactWideTargetA);
+                if (exactWideTargetProjects)
+                    lstrcpyn(path, exactWideTargetA.c_str(), path.Size());
+            }
             UpdateWindow(MainWindow->HWindow);
+
+            IFileSystem* fileSystem = gFileSystem != NULL ? gFileSystem : GetWin32FileSystem();
+            const BOOL useExactWideTarget = !exactWideTarget.empty() &&
+                                            !exactWideTargetProjects &&
+                                            fileSystem->DirectoryExists(exactWideTarget.c_str());
+            if (useExactWideTarget)
+            {
+                CExactWideCurrentDirectoryScope currentDirectory;
+                EnvResult enterResult = currentDirectory.Enter(exactWideTarget.c_str());
+                if (!enterResult.success)
+                {
+                    gPrompter->ShowError(LoadStrW(IDS_ERRORCOPY), GetErrorTextW(enterResult.errorCode));
+                    goto _DLG_AGAIN;
+                }
+
+                changesRootW = exactWideTarget;
+                SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_NORMAL);
+                if (PackUncompress(MainWindow->HWindow, this, GetZIPArchive(), PluginData.GetInterface(),
+                                   ".", GetZIPPath(), PanelSalEnumSelection, &data))
+                {
+                    if (tgtPath == NULL)
+                    {
+                        SetSel(FALSE, -1, TRUE);
+                        PostMessage(HWindow, WM_USER_SELCHANGED, 0, 0);
+                    }
+                }
+                SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_ABOVE_NORMAL);
+
+                if (GetForegroundWindow() == MainWindow->HWindow)
+                    RestoreFocusInSourcePanel();
+            }
+            else
+            {
             //---  for disk paths, convert '/' to '\\' and remove duplicate '\\'
             if (!IsPluginFSPath(path) &&
                 (path[0] != 0 && path[1] == ':' ||                                             // paths like X:...
@@ -717,11 +804,15 @@ void CFilesWindow::UnpackZIPArchive(CFilesWindow* target, BOOL deleteOp, const c
                 }
                 goto _DLG_AGAIN;
             }
+            }
 
             //---  refresh directories that are not automatically refreshed
             // changes on the target path and its subdirectories (creating new directories and unpacking
             // files/directories)
-            MainWindow->PostChangeOnPathNotification(changesRoot, TRUE);
+            if (!changesRootW.empty())
+                MainWindow->PostChangeOnPathNotificationW(changesRootW.c_str(), TRUE);
+            else
+                MainWindow->PostChangeOnPathNotification(changesRoot, TRUE);
             // change in the directory containing the archive (should not occur during unpack, but refresh just in case it does)
             MainWindow->PostChangeOnPathNotification(GetPath(), FALSE);
         }

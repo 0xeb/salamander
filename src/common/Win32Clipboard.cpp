@@ -1,7 +1,14 @@
 ﻿// SPDX-FileCopyrightText: 2025-2026 Elias Bachaalany
 // SPDX-License-Identifier: GPL-2.0-or-later
 
+#ifdef SALLY_CLIPBOARD_STANDALONE
+#include <windows.h>
+#include <ole2.h>
+#include <cstring>
+#include <utility>
+#else
 #include "precomp.h"
+#endif
 #include "IClipboard.h"
 #include <shellapi.h>  // For HDROP, DragQueryFileW
 
@@ -11,7 +18,14 @@ class ClipboardSession
 public:
     ClipboardSession(HWND owner = NULL) : m_open(false)
     {
-        m_open = (::OpenClipboard(owner) != FALSE);
+        // Clipboard viewers and shell extensions commonly hold the clipboard for a
+        // few milliseconds. Keep the UI responsive while tolerating that race.
+        for (int attempt = 0; attempt < 20 && !m_open; ++attempt)
+        {
+            m_open = (::OpenClipboard(owner) != FALSE);
+            if (!m_open && attempt != 19)
+                ::Sleep(5);
+        }
     }
     ~ClipboardSession()
     {
@@ -179,36 +193,38 @@ public:
         if (data == nullptr && size > 0)
             return ClipboardResult::Error(ERROR_INVALID_PARAMETER);
 
-        // Note: Caller should have clipboard open already for multiple SetRawData calls
-        // For single calls, we open/close here
         ClipboardSession session;
         if (!session.IsOpen())
             return ClipboardResult::Error(GetLastError());
 
-        HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE | GMEM_DDESHARE, size > 0 ? size : 1);
-        if (hMem == NULL)
+        return SetRawDataInOpenClipboard(format, data, size);
+    }
+
+    ClipboardResult SetRawDataBatch(const ClipboardRawData* entries, size_t count) override
+    {
+        if (entries == nullptr && count > 0)
+            return ClipboardResult::Error(ERROR_INVALID_PARAMETER);
+        for (size_t i = 0; i < count; ++i)
+        {
+            if (entries[i].format == 0 || (entries[i].data == nullptr && entries[i].size > 0))
+                return ClipboardResult::Error(ERROR_INVALID_PARAMETER);
+        }
+
+        ClipboardSession session;
+        if (!session.IsOpen())
             return ClipboardResult::Error(GetLastError());
 
-        if (size > 0)
+        for (size_t i = 0; i < count; ++i)
         {
-            void* dest = GlobalLock(hMem);
-            if (dest == nullptr)
+            ClipboardResult result = SetRawDataInOpenClipboard(entries[i].format, entries[i].data, entries[i].size);
+            if (!result.success)
             {
-                DWORD err = GetLastError();
-                GlobalFree(hMem);
-                return ClipboardResult::Error(err);
+                // Fail closed: without Preferred DropEffect, consumers may treat a
+                // cut data object as a copy operation.
+                ::EmptyClipboard();
+                return result;
             }
-            memcpy(dest, data, size);
-            GlobalUnlock(hMem);
         }
-
-        if (::SetClipboardData(format, hMem) == NULL)
-        {
-            DWORD err = GetLastError();
-            GlobalFree(hMem);
-            return ClipboardResult::Error(err);
-        }
-
         return ClipboardResult::Ok();
     }
 
@@ -265,6 +281,34 @@ public:
     }
 
 private:
+    ClipboardResult SetRawDataInOpenClipboard(uint32_t format, const void* data, size_t size)
+    {
+        HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE | GMEM_DDESHARE, size > 0 ? size : 1);
+        if (hMem == NULL)
+            return ClipboardResult::Error(GetLastError());
+
+        if (size > 0)
+        {
+            void* dest = GlobalLock(hMem);
+            if (dest == nullptr)
+            {
+                DWORD err = GetLastError();
+                GlobalFree(hMem);
+                return ClipboardResult::Error(err);
+            }
+            memcpy(dest, data, size);
+            GlobalUnlock(hMem);
+        }
+
+        if (::SetClipboardData(format, hMem) == NULL)
+        {
+            DWORD err = GetLastError();
+            GlobalFree(hMem);
+            return ClipboardResult::Error(err);
+        }
+        return ClipboardResult::Ok();
+    }
+
     void SetAnsiText(const wchar_t* text, size_t wideLen)
     {
         // Convert to ANSI and set CF_TEXT for compatibility

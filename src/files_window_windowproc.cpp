@@ -1333,8 +1333,7 @@ void CFilesWindow::ClearCutToClipFlag(BOOL repaint)
 void CFilesWindow::OpenDirHistory()
 {
     CALL_STACK_MESSAGE1("CFilesWindow::OpenDirHistory()");
-    if (!MainWindow->DirHistory->HasPaths())
-        return;
+    const BOOL hasPaths = MainWindow->DirHistory->HasPaths();
 
     BeginStopRefresh(); // the snooper takes a break
 
@@ -1354,7 +1353,17 @@ void CFilesWindow::OpenDirHistory()
         }
     }
 
-    MainWindow->DirHistory->FillHistoryPopupMenu(&menu, 1, -1, FALSE);
+    if (hasPaths)
+        MainWindow->DirHistory->FillHistoryPopupMenu(&menu, 1, -1, FALSE);
+    else
+    {
+        MENU_ITEM_INFO mii;
+        mii.Mask = MENU_MASK_TYPE | MENU_MASK_STATE | MENU_MASK_STRING;
+        mii.Type = MENU_TYPE_STRING;
+        mii.State = MENU_STATE_GRAYED;
+        mii.String = LoadStr(IDS_EMPTYUSERMENU);
+        menu.InsertItem(0xFFFFFFFF, TRUE, &mii);
+    }
     DWORD cmd = menu.Track(MENU_TRACK_RETURNCMD | MENU_TRACK_VERTICAL, r.left, y, HWindow, exludeRect ? &r : NULL);
     if (cmd != 0)
         MainWindow->DirHistory->Execute(cmd, FALSE, this, TRUE, FALSE);

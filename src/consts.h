@@ -817,7 +817,7 @@ void DropEnd(BOOL drop, BOOL shortcuts, void* param, BOOL ownRutine, BOOL isFake
 void EnterLeaveDrop(BOOL enter, void* param);
 
 // Saves preferred drop effect and info about Salamander origin to clipboard
-void SetClipCutCopyInfo(HWND hwnd, BOOL copy, BOOL salObject);
+BOOL SetClipCutCopyInfo(HWND hwnd, BOOL copy, BOOL salObject);
 
 void ShellAction(CFilesWindow* panel, CShellAction action, BOOL useSelection = TRUE,
                  BOOL posByMouse = TRUE, BOOL onlyPanelMenu = FALSE);

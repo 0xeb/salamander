@@ -19,6 +19,13 @@ struct ClipboardResult
     static ClipboardResult Error(uint32_t code) { return {false, code}; }
 };
 
+struct ClipboardRawData
+{
+    uint32_t format;
+    const void* data;
+    size_t size;
+};
+
 // Abstract interface for clipboard operations
 // Enables Unicode support, testing via mocks, and cross-platform portability
 class IClipboard
@@ -47,6 +54,8 @@ public:
     // Raw data operations for custom formats
     // Note: Data must remain valid until clipboard is closed
     virtual ClipboardResult SetRawData(uint32_t format, const void* data, size_t size) = 0;
+    // Writes related formats while holding one clipboard session.
+    virtual ClipboardResult SetRawDataBatch(const ClipboardRawData* entries, size_t count) = 0;
     virtual ClipboardResult GetRawData(uint32_t format, std::vector<uint8_t>& data) = 0;
 
     // Register a custom clipboard format by name

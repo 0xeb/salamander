@@ -729,23 +729,42 @@ void EnterLeaveDrop(BOOL enter, void* param)
 // SetClipCutCopyInfo
 //
 
-void SetClipCutCopyInfo(HWND hwnd, BOOL copy, BOOL salObject)
+BOOL SetClipCutCopyInfo(HWND hwnd, BOOL copy, BOOL salObject)
 {
     (void)hwnd;
     const DWORD effect = copy ? (DROPEFFECT_COPY | DROPEFFECT_LINK) : DROPEFFECT_MOVE;
     const UINT cfPrefDrop = gClipboard->RegisterFormat(L"Preferred DropEffect");
-    if (cfPrefDrop == 0 ||
-        !gClipboard->SetRawData(cfPrefDrop, &effect, sizeof(effect)).success)
-        TRACE_E("Unable to set preferred clipboard drop effect.");
+    if (cfPrefDrop == 0)
+    {
+        TRACE_E("Unable to register preferred clipboard drop effect.");
+        gClipboard->Clear();
+        return FALSE;
+    }
 
+    DWORD marker = 1;
+    UINT cfSalDataObject = 0;
     if (salObject)
     {
-        const DWORD marker = 1;
-        const UINT cfSalDataObject = gClipboard->RegisterFormat(L"SalIDataObject");
-        if (cfSalDataObject == 0 ||
-            !gClipboard->SetRawData(cfSalDataObject, &marker, sizeof(marker)).success)
-            TRACE_E("Unable to mark Sally clipboard ownership.");
+        cfSalDataObject = gClipboard->RegisterFormat(L"SalIDataObject");
+        if (cfSalDataObject == 0)
+        {
+            TRACE_E("Unable to register Sally clipboard ownership marker.");
+            gClipboard->Clear();
+            return FALSE;
+        }
     }
+
+    ClipboardRawData entries[2] = {
+        {cfPrefDrop, &effect, sizeof(effect)},
+        {cfSalDataObject, &marker, sizeof(marker)}};
+    const ClipboardResult result = gClipboard->SetRawDataBatch(entries, salObject ? 2 : 1);
+    if (!result.success)
+    {
+        TRACE_E("Unable to publish clipboard transfer metadata atomically.");
+        gClipboard->Clear();
+        return FALSE;
+    }
+    return TRUE;
 }
 
 //
@@ -831,8 +850,9 @@ static BOOL CollectSelectedPathsW(CFilesWindow* panel, const int* indexes, int i
     return TRUE;
 }
 
-static BOOL SetClipboardHDropW(HWND owner, const std::vector<std::wstring>& paths, BOOL copy, BOOL salObject)
+static BOOL SetClipboardHDropW(HWND owner, const std::vector<std::wstring>& paths)
 {
+    (void)owner;
     sally::clipboard::HDropWideDataObject* dataObject =
         new sally::clipboard::HDropWideDataObject(paths);
     if (dataObject == NULL)
@@ -840,8 +860,6 @@ static BOOL SetClipboardHDropW(HWND owner, const std::vector<std::wstring>& path
 
     BOOL ok = dataObject->IsValid() && gClipboard->SetDataObject(dataObject).success;
     dataObject->Release();
-    if (ok)
-        SetClipCutCopyInfo(owner, copy, salObject);
     return ok;
 }
 
@@ -1801,7 +1819,6 @@ void ShellAction(CFilesWindow* panel, CShellAction action, BOOL useSelection,
                 if (panel->Is(ptDisk))
                 {
                     std::vector<std::wstring> selectedPathsW;
-                    BOOL salObject = sally::clipboard::ShouldTagAsSalamanderObject(TRUE);
                     BOOL hasWideName = FALSE;
                     if (CollectSelectedPathsW(panel, idxs, idxCount, selectedPathsW, hasWideName))
                     {
@@ -1817,9 +1834,7 @@ void ShellAction(CFilesWindow* panel, CShellAction action, BOOL useSelection,
 
                         if (!clipboardSet)
                         {
-                            clipboardSet = SetClipboardHDropW(MainWindow->HWindow, selectedPathsW,
-                                                              action == saCopyToClipboard,
-                                                              salObject);
+                            clipboardSet = SetClipboardHDropW(MainWindow->HWindow, selectedPathsW);
                             usedWideClipboardObject = clipboardSet;
                             if (!clipboardSet)
                                 TRACE_E("Unable to place wide shell selection on clipboard, falling back to shell copy/cut.");
@@ -1851,6 +1866,13 @@ void ShellAction(CFilesWindow* panel, CShellAction action, BOOL useSelection,
                         AuxInvokeAndRelease(menu, &ici);
                         clipboardSet = TRUE;
                     }
+                }
+
+                if (clipboardSet)
+                {
+                    clipboardSet = SetClipCutCopyInfo(
+                        panel->HWindow, action == saCopyToClipboard,
+                        sally::clipboard::ShouldTagAsSalamanderObject(usedWideClipboardObject != FALSE));
                 }
 
                 if (clipboardSet)
@@ -1930,9 +1952,6 @@ void ShellAction(CFilesWindow* panel, CShellAction action, BOOL useSelection,
                     if (samePaths)
                         anotherPanel->RepaintListBox(DRAWFLAG_DIRTY_ONLY | DRAWFLAG_SKIP_VISTEST);
 
-                    // also set preferred drop effect + origin from Salamander
-                    SetClipCutCopyInfo(panel->HWindow, action == saCopyToClipboard,
-                                       sally::clipboard::ShouldTagAsSalamanderObject(usedWideClipboardObject != FALSE));
                 }
 #ifndef _WIN64
             }

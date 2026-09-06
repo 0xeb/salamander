@@ -2661,8 +2661,15 @@ void CFilesWindow::RenameFileInternalW(CFileData* f, const std::wstring& newName
 {
     *tryAgain = TRUE;
 
+    std::wstring trimmedName = newName;
+    if (!trimmedName.empty())
+    {
+        MakeValidFileNameComponentW(&trimmedName[0]);
+        trimmedName.resize(wcslen(trimmedName.c_str()));
+    }
+
     // Validate the new filename - check for invalid characters
-    for (wchar_t c : newName)
+    for (wchar_t c : trimmedName)
     {
         if (c == L'?' || c == L'*' || c == L'\\' || c == L'/' || c == L':' || c < 32 ||
             c == L'<' || c == L'>' || c == L'|' || c == L'"')
@@ -2672,7 +2679,7 @@ void CFilesWindow::RenameFileInternalW(CFileData* f, const std::wstring& newName
         }
     }
 
-    if (newName.empty())
+    if (trimmedName.empty())
     {
         gPrompter->ShowError(LoadStrW(IDS_ERRORRENAMINGFILE), GetErrorTextW(ERROR_INVALID_NAME));
         return;
@@ -2685,7 +2692,7 @@ void CFilesWindow::RenameFileInternalW(CFileData* f, const std::wstring& newName
     std::wstring tgtPath = pathW;
     if (!tgtPath.empty() && tgtPath.back() != L'\\')
         tgtPath += L'\\';
-    tgtPath += newName;
+    tgtPath += trimmedName;
 
     if (sally::unicode::ArePathsExactlySame(NULL, NULL, srcPath, tgtPath))
     {
@@ -2712,19 +2719,80 @@ void CFilesWindow::RenameFileInternalW(CFileData* f, const std::wstring& newName
     IFileSystem* fileSystem = gFileSystem != NULL ? gFileSystem : GetWin32FileSystem();
     FileResult moveResult = fileSystem->MoveFile(srcPath.c_str(), tgtPath.c_str());
 
-    if (moveResult.success)
+    BOOL renamed = moveResult.success;
+    BOOL finished = renamed;
+    DWORD err = moveResult.errorCode;
+    if (!moveResult.success &&
+        (err == ERROR_ALREADY_EXISTS || err == ERROR_FILE_EXISTS) &&
+        _wcsicmp(srcPath.c_str(), tgtPath.c_str()) != 0)
     {
-        NextFocusNameW = newName;
-        WideToAnsi(newName, NextFocusName, NextFocusName.Size());
-        *tryAgain = FALSE;
+        DWORD inAttr = fileSystem->GetFileAttributes(srcPath.c_str());
+        DWORD outAttr = fileSystem->GetFileAttributes(tgtPath.c_str());
+        if (inAttr != INVALID_FILE_ATTRIBUTES && outAttr != INVALID_FILE_ATTRIBUTES &&
+            (inAttr & FILE_ATTRIBUTE_DIRECTORY) == 0 &&
+            (outAttr & FILE_ATTRIBUTE_DIRECTORY) == 0)
+        {
+            HANDLE in = fileSystem->CreateFile(srcPath.c_str(), 0, FILE_SHARE_READ | FILE_SHARE_WRITE,
+                                               NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+            HANDLE out = fileSystem->CreateFile(tgtPath.c_str(), 0, FILE_SHARE_READ | FILE_SHARE_WRITE,
+                                                NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+            if (in != INVALID_HANDLE_VALUE && out != INVALID_HANDLE_VALUE)
+            {
+                std::string srcPathA = WideToAnsi(srcPath);
+                std::string tgtPathA = WideToAnsi(tgtPath);
+                char inInfo[101], outInfo[101];
+                GetFileOverwriteInfo(inInfo, _countof(inInfo), in, srcPathA.c_str());
+                GetFileOverwriteInfo(outInfo, _countof(outInfo), out, tgtPathA.c_str());
+                fileSystem->CloseHandle(in);
+                fileSystem->CloseHandle(out);
+
+                COverwriteDlg dlg(HWindow, tgtPathA.c_str(), outInfo, srcPathA.c_str(), inInfo,
+                                  TRUE, FALSE, tgtPath.c_str(), srcPath.c_str());
+                switch ((int)dlg.Execute())
+                {
+                case IDCANCEL:
+                    finished = TRUE;
+                    // fall through
+                case IDNO:
+                    err = ERROR_SUCCESS;
+                    break;
+
+                case IDYES:
+                {
+                    ClearReadOnlyAttrW(tgtPath.c_str());
+                    FileResult deleteResult = fileSystem->DeleteFile(tgtPath.c_str());
+                    if (deleteResult.success)
+                    {
+                        FileResult retry = fileSystem->MoveFile(srcPath.c_str(), tgtPath.c_str());
+                        err = retry.errorCode;
+                        renamed = retry.success;
+                        finished = renamed;
+                    }
+                    else
+                        err = deleteResult.errorCode;
+                    break;
+                }
+                }
+            }
+            else
+            {
+                if (in != INVALID_HANDLE_VALUE)
+                    fileSystem->CloseHandle(in);
+                if (out != INVALID_HANDLE_VALUE)
+                    fileSystem->CloseHandle(out);
+            }
+        }
     }
-    else
+
+    if (renamed)
     {
-        DWORD err = moveResult.errorCode;
-        if (err != ERROR_SUCCESS)
-            gPrompter->ShowError(LoadStrW(IDS_ERRORRENAMINGFILE), GetErrorTextW(err));
-        *tryAgain = sally::unicode::ShouldRetryUnicodeRenameAfterError(err);
+        NextFocusNameW = trimmedName;
+        WideToAnsi(trimmedName, NextFocusName, NextFocusName.Size());
     }
+    else if (err != ERROR_SUCCESS)
+        gPrompter->ShowError(LoadStrW(IDS_ERRORRENAMINGFILE), GetErrorTextW(err));
+
+    *tryAgain = !finished;
 
     if (handsOFF)
         otherPanel->HandsOff(FALSE);
